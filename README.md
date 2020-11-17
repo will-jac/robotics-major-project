@@ -9,7 +9,7 @@ follow the instructions at:
 
 https://github.com/appliedAI-Initiative/orb_slam_2_ros
 
-(note: the instructions say to run `catkin build`, but the appropriate command is `catkin_make`)
+(note: the instructions say to run `catkin build`, but the appropriate command is `catkin_make_isolated`)
 
 #### Test orb slam
 

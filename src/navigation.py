@@ -4,6 +4,7 @@ import rospy
 from geometry_msgs.msg import Twist, Vector3, Point, Pose
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Empty
 
 import math
 import tf.transformations
@@ -13,11 +14,15 @@ class Navigation():
 
     resolution = 0.01
     fuzzy_n_divisions = 5
+    odom_timeout = 10
 
     def __init__(self):
         self.dest = None
         self.pos = None
         self.head = Twist()
+        self.odom_counter = 0
+
+        
         # create a navigation node
         rospy.init_node('navigation', anonymous=False)
 
@@ -25,16 +30,39 @@ class Navigation():
 
         # listen to the path planner
         rospy.Subscriber('/project/path_planner', Vector3, self.set_dest)
-        rospy.Subscriber('/odom', Odometry, self.update_pos)
+
+        rospy.Subscriber('/odom', Odometry, self.update_odom_pos)
+        rospy.Subscriber('/orb_slam2_mono/pose', Odometry, self.update_pos)
+
+        # create some publishers
+        self.nav_blocked_publish = rospy.Publisher('/navigation/blocked', Empty)
+        self.vel_publish = rospy.Publisher('/mobile_base/commands/velocity', Twist, queue_size=1)
+
+        rate = rospy.Rate(10)
+        # Keep self from shutting down until killed
+        while not rospy.is_shutdown():
+            self.vel_publish.publish(self.head)
+            rate.sleep()
+
 
     def set_dest(self, dest_msg):
         rospy.loginfo('recieved dest:')
         rospy.loginfo(dest_msg)
         self.dest = dest_msg
 
+    def update_odom_pos(self, odom):
+        self.odom_counter += 1
+        # have we heard from orbslam recently?
+        if self.odom_counter > Navigation.odom_timeout:
+            self.update_pos(odom)
+
+
     def update_pos(self, odom):
         self.pos = odom.pose.pose.position
         
+        # we just heard from orbslam
+        self.odom_counter = 0
+
         # could also do all the calculations in quaternion form
         o = odom.pose.pose.orientation
         euler = tf.transformations.euler_from_quaternion([o.x, o.y, o.z, o.w])
@@ -58,12 +86,16 @@ class Navigation():
             heading_to_target = calc_heading()
             if abs(self.pos.z - heading_to_target) % 3.14 < Navigation.resolution:
                 # reset heading
-                self.head.z = heading_to_target
+                self.head.angular.z = heading_to_target
+                self.head.linear.x = 0.0
+            else:
+                # move forwards
+                self.head.linear.x = 0.5
+                self.head.angular.z = 0.0
             
+    # obstacle avoidance
     def update_scan(self, scan):
         self.scan = scan
-
-        # need to run AVOID here
 
         n = len(scan.ranges) / Navigation.fuzzy_n_divisions
 
@@ -71,9 +103,9 @@ class Navigation():
             # bad scan
             return
 
-        if abs(self.pos.z - self.head.z) % 3.14 < Navigation.resolution:
+        if abs(self.pos.z - self.head.angular.z) % 3.14 < Navigation.resolution:
             # we're turning, so we don't actually care about the scan
-            
+            return
 
         # find objects around us
         objects = [None]*n
@@ -83,8 +115,16 @@ class Navigation():
 
         # determine where to go
         if objects[n//2]:
-            # something in front of us - can we move around it?
+            # something in front of us - report back to path planner
+            # TODO
 
+            # currently no classification of people - let's just say that's out of scope
+            # (no dynamic / moving objects in our environment)
+            self.nav_blocked_publish.publish()
+
+            # need to run AVOID here
+            # stop moving
+            self.head.linear.x = 0
 
     def calc_heading():
         delta_x = self.dest.x - self.pos.x
