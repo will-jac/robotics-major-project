@@ -48,9 +48,6 @@
   <node pkg="robotics_project_2" type="navigation.py" name="navigation" output="screen" args="$(optenv ROBOT_INITIAL_POSE)"/>
   -->
     
-  <include file="$(find orb_slam2_ros)/ros/launch/orb_slam2_r200_mono.launch">
-    <arg name="load_map" value="true" />
-    <arg name="map_file" value="major_project_map" />
-  </include>
+  <include file="orb_slam2_r200_mono.launch" />
   
 </launch>

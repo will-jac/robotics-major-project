@@ -5,7 +5,7 @@
 
 ### Install ORB_SLAM_2
 
-follow the instructions at:
+Follow the instructions at:
 
 https://github.com/appliedAI-Initiative/orb_slam_2_ros
 
@@ -39,14 +39,43 @@ We frequently ran into [this](https://github.com/appliedAI-Initiative/orb_slam_2
 
 ### ORB SLAM 2
 
-Add the following lines to your launch file:
+#### Camera
+
+As of right now, the turtlebot will only work with the mono camera. However, the turtlebots do have an RGBD camera, so this should work with ORB SLAM. We're working on the configuration right now--there seems to be some (undocumented) issue with the launch file.
+
+Additionally, we will get better results if we calibrate our camera first. Check back later for detailed instructions
+
+#### Launch
+
+For a basic launch file + test, add the following line to your launch file:
 
 ```{bash}
-  <include file="$(find orb_slam2_ros)/ros/launch/orb_slam2_r200_mono.launch">
-    <arg name="load_map" value="true" />
-    <arg name="map_file" value="major_project_map" />
-  </include>
+  <include file="$(find orb_slam2_ros)/ros/launch/orb_slam2_r200_mono.launch"/>
 ```
+
+However, the launch file they provide is very basic, and has no argument support. We want to be able to load in a map to use, so let's create our own launch file:
+
+```{bash}
+roscd orb_slam2_ros
+cp ros/launch/orb_slam2_r200_mono.launch ~/catkin_ws/src/you_project_dir/.
+cd -
+```
+
+Now, edit the copied launch file, changing the line:
+
+```{bash}
+<param name="load_map" type="bool" value="false" />
+```
+
+to `value="true"`.
+
+Finally, we need to change our launch file so that it calls this one. Edit the line to:
+
+```{bash}
+  <include file="orb_slam2_r200_mono.launch"/>
+```
+
+Now, when we run our launch file, it will launch ORB SLAM, which will load a map called `map.bin` from the root of your project, if such a map exists.
 
 ## Usage
 
@@ -99,7 +128,33 @@ One thing to note is that the odometer only updates if ORB SLAM knows where the 
 
 ### Occupancy grid
 
+ORB SLAM2 uses an occupancy grid, which is fine for 2D maps.
+
 We're working on a way for ORB SLAM to output its updated map in realtime. This functionality is provided in a [different](https://github.com/rayvburn/ORB-SLAM2_ROS) ORB SLAM repo, but the installation and configuration process for that repo is much more complicated (and even undocumented).
 
-Right now, the best way to update D* with new data about where objects are located is directly using the sensors on the robot. Check back soon for more updates about this configuration.
+Right now, the best way to update the path planner (or whatever node needs this information) with new data about where objects are located is to send a command to save the map to the file, then read in the new file in the node.
 
+While the map is saving, SLAM is innactive, so the robot shouldn't be moving while this happens.
+
+```{python}
+#!/usr/bin/env python
+import rospy
+
+class PathPlanner:
+    def __init__():
+        self.position = None
+        rospy.init_node('path_planner', anonymous=False)
+        rospy.Subscriber('/orb_slam2_mono/pose', Odometry, self.update_pos)
+        rospy.Publisher('/orb_slam2_mono/save_map')
+
+    def update_pos(self, odom):
+        self.position = odom.pose.pose
+        o = odom.pose.pose.orientation
+        euler = tf.transformations.euler_from_quaternion([o.x, o.y, o.z, o.w])
+        self.position.z = euler[2] + self.init.z
+
+```
+
+## Issues
+
+ORB SLAM sometimes dies, seeming randomly.
