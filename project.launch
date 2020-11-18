@@ -39,6 +39,6 @@
     <remap from="scan" to="/scan"/>
   </node>
 
-  <include file="orb_slam2_r200_mono.launch" />
+  <include file="$(find robotics-major-project)/launch/orb_slam2_turtlebot_mono.launch" />
   
 </launch>

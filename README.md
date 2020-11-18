@@ -39,43 +39,31 @@ We frequently ran into [this](https://github.com/appliedAI-Initiative/orb_slam_2
 
 ### ORB SLAM 2
 
-#### Camera
-
-As of right now, the turtlebot will only work with the mono camera. However, the turtlebots do have an RGBD camera, so this should work with ORB SLAM. We're working on the configuration right now--there seems to be some (undocumented) issue with the launch file.
-
-Additionally, we will get better results if we calibrate our camera first. Check back later for detailed instructions
-
 #### Launch
 
 For a basic launch file + test, add the following line to your launch file:
 
-```{bash}
+```{xml}
   <include file="$(find orb_slam2_ros)/ros/launch/orb_slam2_r200_mono.launch"/>
 ```
 
-However, the launch file they provide is very basic, and has no argument support. We want to be able to load in a map to use, so let's create our own launch file:
-
-```{bash}
-roscd orb_slam2_ros
-cp ros/launch/orb_slam2_r200_mono.launch ~/catkin_ws/src/you_project_dir/.
-cd -
-```
-
-Now, edit the copied launch file, changing the line:
-
-```{bash}
-<param name="load_map" type="bool" value="false" />
-```
-
-to `value="true"`.
+However, the launch file they provide is very basic, and has no argument support. We want to be able to load in a map to use, so pull in the launch file from the launch folder in this repo. It sets the parameter `load_map` to true, which will try to load a `map.bin` file from your home directory (modify if you want to save it elsewhere).
 
 Finally, we need to change our launch file so that it calls this one. Edit the line to:
 
-```{bash}
-  <include file="orb_slam2_r200_mono.launch"/>
+```{xml}
+  <include file="orb_slam2_turtlebot_mono.launch"/>
 ```
 
-Now, when we run our launch file, it will launch ORB SLAM, which will load a map called `map.bin` from the root of your project, if such a map exists.
+Now, when we run our launch file, it will launch ORB SLAM, which will load a map called `map.bin` from your home directory, if such a map exists.
+
+Note that you should probably configure the project launch file so it dynamically finds the turtlebot launch.
+
+#### Camera
+
+As of right now, the turtlebot will only work with the mono camera. However, the turtlebots do have an RGBD camera, so this should work with ORB SLAM. We're working on the configuration right now--there seems to be some (undocumented) issue with the launch file.
+
+Additionally, we will get better results if we get the calibration information from our camera. These are set for you in the turtlebot launch file. If you want to check, they come from the `/camera/rgb/camera_info` topic
 
 ## Usage
 
@@ -85,7 +73,7 @@ First, you'll need to drive around enough to create a full enough map for locali
 
 ### Odometer
 
-ORB SLAM2 publishes its odometer to `/orb_slam2_mono/pose`, using the `Odometer` message. To read this, you can use the following code snippet to store the `Pose` component of the message.
+ORB SLAM2 publishes its odometer to `/orb_slam2_mono/pose`, using the [Odometer](http://docs.ros.org/en/api/nav_msgs/html/msg/Odometry.html) message. To read this, you can use the following code snippet to store the [Pose](http://docs.ros.org/en/api/geometry_msgs/html/msg/Pose.html) component of the message.
 
 ```{python}
 #!/usr/bin/env python
@@ -103,7 +91,7 @@ class Navigation():
         self.pose = odom.pose.pose
 ```
 
-Note that a `Pose` message contains the heading in quaternion form, which is useful when you're in 3D space, but is kind of difficult to work with. If, like me, you prefer in 'Euler' heading (eg: heading as a single theta value), you can use this transformation code to store the heading as the `z` component of the `Position` (making it an `x`,`y`,`z` struct).
+Note that a `Pose` message contains the heading in quaternion form, which is useful when you're in 3D space, but is kind of difficult to work with. If, like me, you prefer in 'Euler' heading (eg: heading as a single theta value), you can use this transformation code to store the heading as the `z` component of the [Point](http://docs.ros.org/en/api/geometry_msgs/html/msg/Point.html) (making it an `x`,`y`,`z` struct).
 
 ```{python}
 #!/usr/bin/env python
