@@ -132,29 +132,45 @@ ORB SLAM2 uses an occupancy grid, which is fine for 2D maps.
 
 We're working on a way for ORB SLAM to output its updated map in realtime. This functionality is provided in a [different](https://github.com/rayvburn/ORB-SLAM2_ROS) ORB SLAM repo, but the installation and configuration process for that repo is much more complicated (and even undocumented).
 
-Right now, the best way to update the path planner (or whatever node needs this information) with new data about where objects are located is to send a command to save the map to the file, then read in the new file in the node.
+Right now, the best way to update the path planner (or whatever node needs this information) with new data about where objects are located is to use the save map [service](http://wiki.ros.org/Services) to save the map to the file, then read in the new file in the node.
 
 While the map is saving, SLAM is innactive, so the robot shouldn't be moving while this happens.
 
 ```{python}
 #!/usr/bin/env python
 import rospy
+from geometry_msgs.msg import Point
+from orb_slam2_ros.srv import SaveMap
 
 class PathPlanner:
     def __init__():
         self.position = None
         rospy.init_node('path_planner', anonymous=False)
-        rospy.Subscriber('/orb_slam2_mono/pose', Odometry, self.update_pos)
-        rospy.Publisher('/orb_slam2_mono/save_map')
+        rospy.Subscriber('/path_planner', Point, self.plan_path)
+        
+        # create a service proxy for saving the map
+        rospy.wait_for_service('/orb_slam2_mono/save_map')
+        map_service = rospy.ServiceProxy('/orb_slam2_mono/save_map', SaveMap)
 
-    def update_pos(self, odom):
-        self.position = odom.pose.pose
-        o = odom.pose.pose.orientation
-        euler = tf.transformations.euler_from_quaternion([o.x, o.y, o.z, o.w])
-        self.position.z = euler[2] + self.init.z
+        rospy.spin()
 
+    def plan_path(self, point):
+        self.dest = point
+
+        # get the updated map
+        try:
+            resp = map_service('~/catkin_ws/src/project_name/map.bin')
+        except rospy.ServiceException as exc:
+            print('Service did not process request: ' + str(exc))
+        
+        if not resp:
+            print('map saving failed')
+        
+        # TODO: do path planning on the map
 ```
+
+This should block until the map has finished saving.
 
 ## Issues
 
-ORB SLAM sometimes dies, seeming randomly.
+ORB SLAM sometimes dies, seeming randomly. I'm not sure why this happens, although I suspect it is due to a bad camera configuration / event.
