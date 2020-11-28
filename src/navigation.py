@@ -17,9 +17,10 @@ class Navigation():
     odom_timeout = 10
 
     def __init__(self):
-        self.dest = None
+        self.goal = None
+        self.target = None
         self.pos = None
-        self.head = Twist()
+        self.heading = Twist()
         self.odom_counter = 0
 
         
@@ -29,7 +30,7 @@ class Navigation():
         rospy.on_shutdown(self.shutdown)
 
         # listen to the path planner
-        rospy.Subscriber('/project/path_planner', Vector3, self.set_dest)
+        rospy.Subscriber('/project/path_planner', Vector3, self.set_goal)
 
         rospy.Subscriber('/odom', Odometry, self.update_odom_pos)
         rospy.Subscriber('/orb_slam2_mono/pose', Odometry, self.update_pos)
@@ -41,94 +42,77 @@ class Navigation():
         rate = rospy.Rate(10)
         # Keep self from shutting down until killed
         while not rospy.is_shutdown():
-            self.vel_publish.publish(self.head)
+            navigate()
+            self.vel_publish.publish(self.heading)
             rate.sleep()
 
+    def navigate(self):
+        if is_target_obstructed():
+            compute_new_target()
+        if reached_target():
+            # set new target (unless we're already at the goal)
+            self.target = self.goal
+        else:
+            nav_to_target()
 
-    def set_dest(self, dest_msg):
-        rospy.loginfo('recieved dest:')
-        rospy.loginfo(dest_msg)
-        self.dest = dest_msg
+    def is_target_obstructed(self):
+        if len(self.scan.ranges) == 0:
+            # bad scan
+            return False
 
-    def update_odom_pos(self, odom):
-        self.odom_counter += 1
-        # have we heard from orbslam recently?
-        if self.odom_counter > Navigation.odom_timeout:
-            self.update_pos(odom)
-
-
-    def update_pos(self, odom):
-        self.pos = odom.pose.pose.position
+        # where should the target be in relation to our heading?
+        # can we see in the direction of the target?
+        heading_to_target = self.calc_heading()
+        # if (self.pos.z - self.scan.angle_min) % 3.14 < heading_to_target and \
+        #         (self.pos.z - self.scan.angle_max) % 3.14 > heading_to_target:
         
-        # we just heard from orbslam
-        self.odom_counter = 0
+        # angle_diff < scan_angle_range
+        angle_diff = self.pos.z - heading_to_target
+        if angle_diff < self.scan.angle_max - self.scan.angle_min
+            # we can see the target
+            # what's the scan in that direction?
+            index = angle_diff // self.scan.angle_increment
+            if index > 5 and index < self.scan.range_max - 5:
+                # scan through the ranges around it too 
+                if not(np.isnan(self.scan.ranges[index-5:index+5]).all()):
+                    # there is an object!
+                    return True
 
-        # could also do all the calculations in quaternion form
-        o = odom.pose.pose.orientation
-        euler = tf.transformations.euler_from_quaternion([o.x, o.y, o.z, o.w])
-        self.pos.z = euler[2] + self.init.z
-
-        # calculate where to go
-        if not (self.dest is None):
-            
-            if abs(self.pos.x - self.dest.x) < Navigation.resolution:
-                if abs(self.pos.y - self.dest.y) > Navigation.resolution:
+        # return False if we can't see the target 
+        return False
+                    
+    def reached_target(self):
+        if not (self.target is None):
+            if abs(self.pos.x - self.target.x) < Navigation.resolution:
+                if abs(self.pos.y - self.target.y) > Navigation.resolution:
                     # we're there!
-                    rospy.loginfo('reached dest')
+                    rospy.loginfo('reached target')
                     rospy.loginfo(self.pos)
+                    return True
+        return False
 
-                    #TODO: Call the execution monitor
+    def nav_to_target(self):
+        # calculate where to go (nav to the target)
+        if not (self.target is None):
+            if abs(self.pos.x - self.target.x) < Navigation.resolution:
+                if abs(self.pos.y - self.target.y) > Navigation.resolution:
+                    # at target
                     return
-
-            # we're not there
             
             # should we change the direction we're heading?
             heading_to_target = calc_heading()
             if abs(self.pos.z - heading_to_target) % 3.14 < Navigation.resolution:
                 # reset heading
-                self.head.angular.z = heading_to_target
-                self.head.linear.x = 0.0
+                self.heading.angular.z = heading_to_target
+                self.heading.linear.x = 0.0
             else:
                 # move forwards
-                self.head.linear.x = 0.5
-                self.head.angular.z = 0.0
-            
-    # obstacle avoidance
-    def update_scan(self, scan):
-        self.scan = scan
-
-        n = len(scan.ranges) / Navigation.fuzzy_n_divisions
-
-        if n == 0:
-            # bad scan
-            return
-
-        if abs(self.pos.z - self.head.angular.z) % 3.14 < Navigation.resolution:
-            # we're turning, so we don't actually care about the scan
-            return
-
-        # find objects around us
-        objects = [None]*n
-        for i in range(Navigation.fuzzy_n_divisions):
-            # true if there is an object (eg not all values nan)
-            objects[i] = not(np.isnan(scan.ranges[i*n:(i+1)*n]).all())
-
-        # determine where to go
-        if objects[n//2]:
-            # something in front of us - report back to path planner
-            # TODO
-
-            # currently no classification of people - let's just say that's out of scope
-            # (no dynamic / moving objects in our environment)
-            self.nav_blocked_publish.publish()
-
-            # need to run AVOID here
-            # stop moving
-            self.head.linear.x = 0
-
-    def calc_heading():
-        delta_x = self.dest.x - self.pos.x
-        delta_y = self.dest.y - self.pos.y
+                self.heading.linear.x = 0.5
+                self.heading.angular.z = 0.0
+    
+    def calc_heading(self):
+        delta_x = self.target.x - self.pos.x
+        delta_y = self.target.y - self.pos.y
 
         if delta_x == 0:
             if delta_y < 0:
@@ -154,3 +138,34 @@ class Navigation():
                     dest_ang += math.pi
 
         return dest_ang
+
+    def set_goal(self, dest_msg):
+        rospy.loginfo('recieved goal:')
+        rospy.loginfo(dest_msg)
+        self.goal = dest_msg
+        self.target = self.goal
+
+    def update_odom_pos(self, odom):
+        self.odom_counter += 1
+        # have we heard from orbslam recently?
+        if self.odom_counter > Navigation.odom_timeout:
+            self.update_pos(odom)
+
+    def update_pos(self, odom):
+        self.pos = odom.pose.pose.position
+        
+        # we just heard from orbslam
+        self.odom_counter = 0
+
+        # could also do all the calculations in quaternion form
+        o = odom.pose.pose.orientation
+        euler = tf.transformations.euler_from_quaternion([o.x, o.y, o.z, o.w])
+        self.pos.z = euler[2] + self.init.z
+           
+    def update_scan(self, scan):
+        if len(self.scan.ranges) == 0:
+            # bad scan
+            return 
+        self.scan = scan
+
+    
