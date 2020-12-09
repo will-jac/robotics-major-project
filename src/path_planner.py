@@ -88,14 +88,6 @@ class PathPlanner():
     def computeShortestPath(self):
         #Throws an error when there is no path
         try:
-            print(self.startX)
-            print(self.startY)
-            print(self.queue.items)
-            print(self.queue.primaries)
-            print(self.queue.secondaries)
-            print(self.keyComp(self.queue.topKey(), self.calculateKey(self.startX, self.startY)))
-            print(self.grid[self.startY][self.startX]['rhs'])
-            print(self.grid[self.startY][self.startX]['g'])
             #Run until we've passed the start in our max reach and the start needs to be measured
             while self.keyComp(self.queue.topKey(), self.calculateKey(self.startX, self.startY)) == -1 or self.grid[self.startY][self.startX]['rhs'] > self.grid[self.startY][self.startX]['g']:
                 #Get the top item
@@ -208,7 +200,7 @@ class PathPlanner():
         if len(self.grid) > 0:
             self.grid[self.goalY][self.goalX]["rhs"] = 0
             self.computeShortestPath()
-            self.givePoint()
+            self.givePoint(None)
 
     #Update grid from the map
     def updateGrid(self, msg):
@@ -328,7 +320,7 @@ class PathPlanner():
                     self.grid[considering[0]][considering[1]]["open"] = -1
     
     #Respond to a point request
-    def givePoint(self):
+    def givePoint(self, msg):
         if self.foundPath:
             print(self.foundPath)
             print("I think I found a path")
@@ -343,17 +335,19 @@ class PathPlanner():
     
     def replan(self, msg):
         self.computeShortestPath()
-        self.givePoint()
+        self.givePoint(None)
 
     #Convert coordinates to a point
     def xyToPoint(self, x, y):
+        print("Converting point", x, y, "Which is not the starting point", self.startX, self.startY)
         toReturn = Point(0, 0, 0)
         toReturn.x = x * self.resolution + self.offset[0]
         toReturn.y = y * self.resolution + self.offset[1]
+        return toReturn
         
     #Convert a point to coordinates
     def pointToXY(self, point):
-        return int((point.x - self.offset[0]) / self.resolution), int((point.y - self.offset[1]) / self.resolution)
+        return int(round((point.x - self.offset[0]) / self.resolution)), int(round((point.y - self.offset[1]) / self.resolution))
 
     #Shut down
     def shutdown(self):
@@ -389,10 +383,10 @@ class PathPlanner():
         file.write("P5\n768 704\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
-                if (self.grid[y][x]["rhs"] > 255):
+                if (self.grid[y][x]["rhs"] > 510):
                     file.write(b"\x00")
                 else:
-                    file.write(bytes([int(255 - self.grid[y][x]["rhs"])]))
+                    file.write(bytes([int(255 - self.grid[y][x]["rhs"] / 2)]))
         file.close()
 
         file = open('/home/daniel/catkin_ws/src/robotics-major-project/next.pgm', 'wb')
