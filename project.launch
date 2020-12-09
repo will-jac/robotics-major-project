@@ -1,5 +1,5 @@
 <launch>
-  <arg name="world_file"  default="$(find robotics-major-project)/devon.world"/>
+  <arg name="world_file"  default="$(find robotics-major-project)/devon_floor_1.world"/>
 
   <!-- Env variables -->
   <arg name="base"      value="$(optenv TURTLEBOT_BASE kobuki)"/> <!-- create, roomba -->
