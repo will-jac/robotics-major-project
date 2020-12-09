@@ -19,7 +19,7 @@ class Navigation():
     fuzzy_n_divisions = 21
 
     min_dist_to_nav_to = 0.5 # meters
-    min_dist_to_avoid = 3
+    min_dist_to_avoid = 0.1
 
     def __init__(self):
         # print('starting up')
@@ -69,10 +69,11 @@ class Navigation():
     def navigate(self):
         if self.target is None:
             return
-        if self.is_target_obstructed():
-            if not self.compute_new_target():
-                # TODO: tell the path planner no path found -> trigger a replan
-                self.nav_blocked_publish.publish()
+        # if self.is_target_obstructed():
+        #     if not self.compute_new_target():
+        #         # TODO: tell the path planner no path found -> trigger a replan
+        #         self.nav_blocked_publish.publish()
+        self.heading_to_target = self.calc_target_angle()
 
         if self.reached_target():
             # stop moving
@@ -80,9 +81,9 @@ class Navigation():
 
             # set new target (unless we're already at the goal)
             if self.target.x == self.goal.x and self.target.y == self.goal.y:
-                print('self.target == self.goal')
-                print(self.target)
-                print(self.goal)
+                # print('self.target == self.goal')
+                # print(self.target)
+                # print(self.goal)
                 self.target = None
                 
                 # Send request for next target
@@ -108,7 +109,6 @@ class Navigation():
 
         # where should the target be in relation to our heading?
         # can we see in the direction of the target?
-        self.heading_to_target = self.calc_target_angle()
         
         # if (self.pos.z - self.scan.angle_min) % 3.14 < heading_to_target and \
         #         (self.pos.z - self.scan.angle_max) % 3.14 > heading_to_target:
@@ -244,13 +244,13 @@ class Navigation():
                 # print('turning', self.pos.z)
                 # reset heading
                 if (self.pos.z - self.heading_to_target < 0):
-                    self.heading.angular.z = 0.5
+                    self.heading.angular.z = 0.75
                 else:
-                    self.heading.angular.z = -0.5
+                    self.heading.angular.z = -0.75
                 self.heading.linear.x = 0.0
             else:
                 # move forwards
-                self.heading.linear.x = 0.3
+                self.heading.linear.x = 1
                 self.heading.angular.z = 0.0
             # print('naving to target') #, self.heading, self.heading_to_target, self.pos)
 

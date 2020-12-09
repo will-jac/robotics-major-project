@@ -30,7 +30,7 @@ class PathPlanner():
 
         # idk if this is correct
         self.offset = (0,0)
-        self.resolution = 0.01
+        self.resolution = 0.5
 
         #ROS setup stuff
         rospy.init_node('path_planner', anonymous=True)
@@ -215,10 +215,10 @@ class PathPlanner():
                 m = re.search("(.+?): (.*)", line)
                 if (m):
                     #Get resolution
-                    if m.group(1) == "resolution":
-                        self.resolution = float(m.group(2))
+                    # if m.group(1) == "resolution":
+                    #     self.resolution = float(m.group(2))
                     #Get origin
-                    elif m.group(1) == "origin":
+                    if m.group(1) == "origin":
                         m = re.search("\[(-?\d+\.\d+), (-?\d+\.\d+), -?\d+\.\d+\]", m.group(2))
                         # TODO: check this cast to float
                         self.offset = (float(m.group(1)), float(m.group(2)))
@@ -226,7 +226,7 @@ class PathPlanner():
             file.close()
 
             # handle map metadata
-            self.resolution = msg.info.resolution
+            # self.resolution = msg.info.resolution
             self.grid = [[None] * msg.info.width for _ in range(msg.info.height)]
             
             #For each row, mark a row
@@ -330,6 +330,7 @@ class PathPlanner():
                 rospy.loginfo('No path found!')
                 return
             else:
+
                 self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
         else:
             rospy.loginfo('no path found!')
