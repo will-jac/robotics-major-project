@@ -39,39 +39,16 @@
     <remap from="image" to="/camera/depth/image_raw"/>
     <remap from="scan" to="/scan"/>
   </node>
-
-  <!-- <include file="$(find robotics-major-project)/launch/orb_slam2_turtlebot_rgbd.launch" /> -->
-  
-  <!-- <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping">
-    <param name="scan" value="base_scan"/>
-  </node> -->
-  <!-- <include file="$(find turtlebot_navigation)/launch/includes/gmapping/$(arg 3d_sensor)_gmapping.launch.xml"/> -->
-
-  <!-- <launch> -->
-    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find turtlebot_rviz_launchers)/rviz/navigation.rviz"/> -->
-  <!-- </launch> -->
-
-
-  <!-- <include file="$(find hector_slam_launch)/launch/tutorial.launch"/> -->
-
-  <!-- <include file="$(find robotics-major-project)/launch/hector.launch" /> -->
   
   <!-- Project nodes -->
   <node pkg="robotics-major-project" type="navigation.py" name="navigation" output="screen" />
-  <node pkg="robotics-major-project" type="localization.py" name="localization" />
+  <node pkg="robotics-major-project" type="localization.py" name="localization" output="screen" />
 
-  <!-- RGBD SLAM -->
-  <!-- <include file="$(find robotics-major-project)/launch/rgbdslam.launch" /> -->
-  
-  <!-- Octomap -->
-  <!-- <node pkg="octomap_server" type="octomap_server_node" name="octomap_server" args="$(find robotics-major-project)/devon_test_2.ot">
-    <param name="resolution" value="0.05" /> 
-    <param name="frame_id" type="string" value="map" />
-    <param name="sensor_model/max_range" value="5.0" />
-    <remap from="cloud_in" to="rgbdslam/online_clouds"/>
-  </node> -->
+  <include file="$(find turtlebot_rviz_launchers)/launch/view_navigation.launch"/>
 
-  
+  <arg name="map_file" default="$(find robotics-major-project)/complete_devon.yaml"/>
+  <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+
   <!-- AMCL -->
   <include file="$(find turtlebot_navigation)/launch/includes/amcl/amcl.launch.xml">
     <arg name="scan_topic" value="scan"/>
