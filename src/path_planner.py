@@ -6,6 +6,7 @@ from std_msgs.msg import Empty
 
 import math
 import re
+import os
 
 from priority_queue import PriorityQueue
 
@@ -357,7 +358,7 @@ class PathPlanner():
         print("Dumping map")
         #Change this to make the dump work
         #I'm sure there's a way to do this relative but it didn't work when I tried it
-        file = open('/home/daniel/catkin_ws/src/robotics-major-project/map.pgm', 'wb')
+        file = open(os.path.dirname(os.path.realpath(__file__)) + "../map.pgm", 'wb')
         file.write("P5\n768 704\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
@@ -369,7 +370,7 @@ class PathPlanner():
                     file.write(b"\x00" if self.grid[y][x]["open"] < 1 else b"\xFE")
         file.close()
 
-        file = open('/home/daniel/catkin_ws/src/robotics-major-project/g.pgm', 'wb')
+        file = open(os.path.dirname(os.path.realpath(__file__)) + "../g.pgm", 'wb')
         file.write("P5\n768 704\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
@@ -379,7 +380,7 @@ class PathPlanner():
                     file.write(bytes([int(255 - self.grid[y][x]["g"])]))
         file.close()
 
-        file = open('/home/daniel/catkin_ws/src/robotics-major-project/rhs.pgm', 'wb')
+        file = open(os.path.dirname(os.path.realpath(__file__)) + "../rhs.pgm", 'wb')
         file.write("P5\n768 704\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
@@ -389,7 +390,7 @@ class PathPlanner():
                     file.write(bytes([int(255 - self.grid[y][x]["rhs"] / 2)]))
         file.close()
 
-        file = open('/home/daniel/catkin_ws/src/robotics-major-project/next.pgm', 'wb')
+        file = open(os.path.dirname(os.path.realpath(__file__)) + "../next.pgm", 'wb')
         file.write("P5\n768 704\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
