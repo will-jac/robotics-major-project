@@ -19,8 +19,6 @@ coordinates = {
 
 import os
 
-print(os.path.dirname(os.path.realpath(__file__)))
-
 commentaryMap = {
     "Attrium": os.path.dirname(os.path.realpath(__file__)) + "../commentary/Atrium.wav",
     "CS Office": os.path.dirname(os.path.realpath(__file__)) + "../commentary/CSOffice.wav",

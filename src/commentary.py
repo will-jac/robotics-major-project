@@ -18,7 +18,7 @@ class Commentary():
         x = round(point.x, 1)
         y = round(point.y, 1)
         for key in commentaryMap.keys():
-            if locations[key][0] == x and locations[key][1] == y:
+            if coordinates[key][0] == x and coordinates[key][1] == y:
                 playsound(commentaryMap[key], True)
                 return
 
