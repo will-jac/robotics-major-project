@@ -2,19 +2,19 @@
   <!-- Delete the next line, if you start the openni driver separately -->
   <!-- <include file="$(find openni_launch)/launch/openni.launch"/> -->
   
-  <remap from="/camera/rgb/image_color" to="/camera/rgb/image_raw" />
+  <!-- <remap from="/camera/rgb/image_color" to="/camera/rgb/image_raw" />
 
-  <remap from="/camera/depth_registered/sw_registered/image_rect_raw" to="/camera/depth/image_raw" />
+  <remap from="/camera/depth_registered/sw_registered/image_rect_raw" to="/camera/depth/image_raw" /> -->
 
-  <include file="$(find openni_launch)/launch/openni.launch"/>
+  <!-- <include file="$(find openni_launch)/launch/openni.launch"/> -->
 
-  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true" output="screen">
+  <node pkg="rgbdslam" type="rgbdslam" name="rgbdslam" cwd="node" required="true">
     <!-- Input data settings-->
 
-    <param name="config/topic_image_mono"              value="/camera/rgb/image_color"/>
-    <param name="config/topic_image_depth"             value="/camera/depth_registered/sw_registered/image_rect_raw"/>
+    <param name="config/topic_image_mono"              value="/camera/rgb/image_raw"/>
+    <param name="config/topic_image_depth"             value="/camera/depth/image_raw"/>
 
-    <param name="/config/use_gui"                      value="true"/>
+    <param name="config/use_gui"                       value="true"/>
     <param name="config/base_frame_name"               value="/base_link"/>
 
     <param name="config/max_rotation_degree"           value="15"/>
@@ -49,6 +49,8 @@
     <param name="config/backend_solver"                value="pcg"/> <!-- pcg is fast and good for online operation -->
     <param name="config/cloud_creation_skip_step"      value="16"/> <!-- Heavily subsample point cloud during creation -->
   
+    <!-- <param name="config/fixed_frame_name"              value="/vodom"/> -->
+    <!-- Signify that this is not mapping -->
     <!-- <param name="config/start_paused" value="true"/> -->
 
     <!-- <param name="config/use_robot_odom" value="true"/>
