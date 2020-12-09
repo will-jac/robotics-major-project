@@ -25,7 +25,7 @@ class PathPlanner():
         self.oldX = 0
         self.oldY = 0
         self.km = 0
-        self.foundPath = True
+        self.foundPath = False
 
         # idk if this is correct
         self.offset = (0,0)
@@ -173,12 +173,26 @@ class PathPlanner():
     def updatePosition(self, point):
         # TODO: check if this is correct. pointToXY -> error because offset is a string?
         self.startX, self.startY = self.pointToXY(point) # point.x, point.y 
+        print("Updated start:")
+        print(self.startX)
+        print(self.startY)
     
     #Set goal
     def updateGoal(self, point):
         rospy.loginfo('path planner goal recieved')
         rospy.loginfo(point)
         self.goalX, self.goalY = self.pointToXY(point)
+        print("Updated goal:")
+        print(self.goalX)
+        print(self.goalY)
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                self.grid[y][x]["rhs"] = float("inf")
+                self.grid[y][x]["g"] = float("inf")
+                self.grid[y][x]["next"] = None
+        self.queue = PriorityQueue()
+        self.grid[self.goalY][self.goalX]["rhs"] = 0
+        self.queue.put((self.goalY, self.goalX), math.hypot(self.goalX - self.startX, self.goalY - self.startY), 0)
         self.computeShortestPath()
         self.givePoint()
 
@@ -319,6 +333,8 @@ class PathPlanner():
         
     #Convert a point to coordinates
     def pointToXY(self, point):
+        print((point.x - self.offset[0]) / self.resolution)
+        print((point.x - self.offset[1]) / self.resolution)
         return int((point.x - self.offset[0]) / self.resolution), int((point.x - self.offset[1]) / self.resolution)
 
     #Shut down
