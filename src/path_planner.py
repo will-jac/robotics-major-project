@@ -88,6 +88,14 @@ class PathPlanner():
     def computeShortestPath(self):
         #Throws an error when there is no path
         try:
+            print(self.startX)
+            print(self.startY)
+            print(self.queue.items)
+            print(self.queue.primaries)
+            print(self.queue.secondaries)
+            print(self.keyComp(self.queue.topKey(), self.calculateKey(self.startX, self.startY)))
+            print(self.grid[self.startY][self.startX]['rhs'])
+            print(self.grid[self.startY][self.startX]['g'])
             #Run until we've passed the start in our max reach and the start needs to be measured
             while self.keyComp(self.queue.topKey(), self.calculateKey(self.startX, self.startY)) == -1 or self.grid[self.startY][self.startX]['rhs'] > self.grid[self.startY][self.startX]['g']:
                 #Get the top item
@@ -180,25 +188,22 @@ class PathPlanner():
     def updateGoal(self, point):
         rospy.loginfo('path planner goal recieved')
         rospy.loginfo(point)
-        try:
-            self.goalX, self.goalY = self.pointToXY(point)
-            rospy.loginfo("Updated goal:")
-            rospy.loginfo(self.goalX)
-            rospy.loginfo(self.goalY)
-            for y in range(len(self.grid)):
-                for x in range(len(self.grid[y])):
-                    self.grid[y][x]["rhs"] = float("inf")
-                    self.grid[y][x]["g"] = float("inf")
-                    self.grid[y][x]["next"] = None
-            self.foundPath = False
-            self.queue = PriorityQueue()
-            self.queue.put((self.goalY, self.goalX), math.hypot(self.goalX - self.startX, self.goalY - self.startY), 0)
-            if len(self.grid) > 0:
-                self.grid[self.goalY][self.goalX]["rhs"] = 0
-                self.computeShortestPath()
-                self.givePoint()
-        except Exception as e:
-            rospy.logerr(e)
+        self.goalX, self.goalY = self.pointToXY(point)
+        rospy.loginfo("Updated goal:")
+        rospy.loginfo(self.goalX)
+        rospy.loginfo(self.goalY)
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                self.grid[y][x]["rhs"] = float("inf")
+                self.grid[y][x]["g"] = float("inf")
+                self.grid[y][x]["next"] = None
+        self.foundPath = False
+        self.queue = PriorityQueue()
+        self.queue.put((self.goalY, self.goalX), math.hypot(self.goalX - self.startX, self.goalY - self.startY), 0)
+        if len(self.grid) > 0:
+            self.grid[self.goalY][self.goalX]["rhs"] = 0
+            self.computeShortestPath()
+            self.givePoint()
 
     #Update grid from the map
     def updateGrid(self, msg):
@@ -333,7 +338,7 @@ class PathPlanner():
 
     #Convert coordinates to a point
     def xyToPoint(self, x, y):
-        toReturn = Point()
+        toReturn = Point(0, 0, 0)
         toReturn.x = x * self.resolution + self.offset[0]
         toReturn.y = y * self.resolution + self.offset[1]
         
@@ -359,6 +364,33 @@ class PathPlanner():
                     file.write(b"\xAA")
                 else:
                     file.write(b"\x00" if self.grid[y][x]["open"] < 1 else b"\xFE")
+        file.close()
+
+        file = open('/home/daniel/catkin_ws/src/robotics-major-project/g.pgm', 'wb')
+        file.write("P5\n768 704\n255\n")
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                if (self.grid[y][x]["g"] > 255):
+                    file.write(b"\x00")
+                else:
+                    file.write(bytes([int(255 - self.grid[y][x]["g"])]))
+        file.close()
+
+        file = open('/home/daniel/catkin_ws/src/robotics-major-project/rhs.pgm', 'wb')
+        file.write("P5\n768 704\n255\n")
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                if (self.grid[y][x]["rhs"] > 255):
+                    file.write(b"\x00")
+                else:
+                    file.write(bytes([int(255 - self.grid[y][x]["rhs"])]))
+        file.close()
+
+        file = open('/home/daniel/catkin_ws/src/robotics-major-project/next.pgm', 'wb')
+        file.write("P5\n768 704\n255\n")
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                file.write(b"\xFE" if self.grid[y][x]["next"] == None else b"\x00")
         file.close()
 
 #Run
