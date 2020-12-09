@@ -14,7 +14,8 @@ import tf2_ros
 
 class Navigation():
 
-    resolution = 0.025
+    resolution = 0.1
+    ang_resolution = 0.05
     # this should be an odd number
     fuzzy_n_divisions = 21
 
@@ -240,18 +241,36 @@ class Navigation():
                     return
 
             # should we change the direction we're heading?
-            if abs(self.pos.z - self.heading_to_target) > Navigation.resolution or abs(self.pos.z - self.heading_to_target) > abs(6.28 - Navigation.resolution):
-                # print('turning', self.pos.z)
-                # reset heading
-                if (self.pos.z - self.heading_to_target < 0):
-                    self.heading.angular.z = 0.75
+            delta = 0
+            if self.pos.z < 0:
+                if self.heading_to_target > 0:
+                    # opposite signs -> are we close to PI?
+                    delta = 6.28 - self.pos.z - self.heading_to_target
                 else:
-                    self.heading.angular.z = -0.75
-                self.heading.linear.x = 0.0
+                    # same signs, negative
+                    delta = self.heading_to_target - self.pos.z 
             else:
+                if self.heading_to_target < 0:
+                    # opposite signs -> are we close to PI?
+                    delta = -6.28 + self.pos.z - self.heading_to_target
+                else:
+                    # same signs, positive
+                    delta = self.pos.z - self.heading_to_target
+
+            if abs(delta) < Navigation.ang_resolution 
+                print('forward', self.pos.z, self.heading_to_target)
                 # move forwards
                 self.heading.linear.x = 1
                 self.heading.angular.z = 0.0
+            else:
+                # reset heading
+                if (delta < 0):
+                    self.heading.angular.z = 1
+                else:
+                    self.heading.angular.z = -1
+                self.heading.linear.x = 0.0
+                
+                print('turning', self.heading.angular.z, self.pos.z, self.heading_to_target)
             # print('naving to target') #, self.heading, self.heading_to_target, self.pos)
 
     def calc_target_angle(self):
