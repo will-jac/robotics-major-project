@@ -52,6 +52,7 @@ class Navigation():
         # create some publishers
         self.nav_blocked_publish = rospy.Publisher('/navigation/blocked', Empty, queue_size=1)
         self.vel_publish = rospy.Publisher('/mobile_base/commands/velocity', Twist, queue_size=1)
+        self.target_request_publish = rospy.Publisher('/project/path_planner_request', Empty, queue_size=1)
 
         # print('starting up')
 
@@ -73,6 +74,8 @@ class Navigation():
         if self.reached_target():
             # stop moving
             self.heading = Twist()
+            #Send request for next target
+            self.target_request_publish.publish()
             print(self.target)
             print(self.goal)
             # set new target (unless we're already at the goal)

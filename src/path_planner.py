@@ -3,6 +3,8 @@ import re
 from priority_queue import PriorityQueue
 import rospy
 from geometry_msgs.msg import Point
+from nav_msgs.msg import OccupancyGrid
+from std_msgs.msg import Empty
 
 class PathPlanner():
 
@@ -16,64 +18,29 @@ class PathPlanner():
         self.oldX = 0
         self.oldY = 0
         self.km = 0
+        self.foundPath = True
 
         rospy.init_node('path_planner', anonymous=True)
         rospy.on_shutdown(self.shutdown)
 
         rospy.Subscriber('/project/pose', Point, self.updatePosition)
-        rospy.Subscriber('/project/target', Point, self.updateGoal)
+        rospy.Subscriber('/project/task_planner', Point, self.updateGoal)
+        rospy.Subscriber('/map', OccupancyGrid, self.updateGrid)
+        rospy.Subscriber('/project/path_planner_request', Empty, self.givePoint)
 
-        self.initializeGrid()
+        rospy.Publisher('/project/path_planner', Point, queue_size=1)
 
         self.computeShortestPath()
         rate = rospy.Rate(1)
         while not rospy.is_shutdown():
-            self.computeShortestPath()
-            self.updateGrid()
             rate.sleep()
-
-        #Debug stuff
-        nextX = self.startX
-        nextY = self.startY
-        while self.grid[nextY][nextX]['next'] != None:
-            print(nextX, nextY)
-            nextX, nextY = self.grid[nextY][nextX]['next'][1], self.grid[nextY][nextX]['next'][0]
-        for i in range(len(self.grid)):
-            for j in range(len(self.grid[i])):
-                print("x:", j, "y:", i, "rhs:", self.grid[i][j]["rhs"], "g:", self.grid[i][j]["g"], "next:", self.grid[i][j]["next"])
-
-
-    def initializeGrid(self):
-        file = open("../complete_devon.yaml")
-        for line in file:
-            m = re.search("(.+?): (.*)", line)
-            if (m):
-                if m.group(1) == "resolution":
-                    self.resolution = float(m.group(2))
-                elif m.group(1) == "origin":
-                    m = re.search("\[(-?\d+\.\d+), (-?\d+\.\d+), -?\d+\.\d+\]", m.group(2))
-                    self.offset = (m.group(1), m.group(2))
-        file.close()
-
-        file = open(self.image)
-        for line in file:
-            index = len(self.grid)
-            self.grid.append([])
-            arr = line.split()
-            for cell in arr:
-                toAdd = {'open': int(cell), 'rhs': float('inf'), 'g': float('inf'), 'next': None}
-                self.grid[index].append(toAdd)
-        file.close()
-        self.grid[self.goalY][self.goalX]['rhs'] = 0
-        self.queue.put((self.goalY, self.goalX), math.hypot(self.goalX - self.startX, self.goalY - self.startY), 0)
-        self.expandGridWalls()
 
     def updateVertex(self, x, y):
         if self.grid[y][x]['g'] != self.grid[y][x]['rhs'] and self.queue.includes((y, x)):
-            key = calculateKey(x, y)
+            key = self.calculateKey(x, y)
             self.queue.update((y, x), key[0], key[1])
         elif self.grid[y][x]['g'] != self.grid[y][x]['rhs'] and not self.queue.includes((y, x)):
-            key = calculateKey(x, y)
+            key = self.calculateKey(x, y)
             self.queue.put((y, x), key[0], key[1])
         elif self.grid[y][x]['g'] == self.grid[y][x]['rhs'] and self.queue.includes((y, x)):
             self.queue.remove((y, x))
@@ -91,40 +58,42 @@ class PathPlanner():
 
     def computeShortestPath(self):
         try:
-            while keyComp(self.queue.topKey(), calculateKey(self.startX, self.startY)) == -1 or self.grid[self.startY][self.startX]['rhs'] > self.grid[self.startY][self.startX]['g']:
+            while self.keyComp(self.queue.topKey(), self.calculateKey(self.startX, self.startY)) == -1 or self.grid[self.startY][self.startX]['rhs'] > self.grid[self.startY][self.startX]['g']:
                 item = self.queue.peek()
                 k_old = self.queue.topKey()
-                k_new = calculateKey(item[1], item[0])
-                if keyComp(k_old, k_new) == -1:
+                k_new = self.calculateKey(item[1], item[0])
+                if self.keyComp(k_old, k_new) == -1:
                     self.queue.update(item, k_new[0], k_old[1])
                 elif self.grid[item[0]][item[1]]['g'] > self.grid[item[0]][item[1]]['rhs']:
                     self.grid[item[0]][item[1]]['g'] = self.grid[item[0]][item[1]]['rhs']
                     self.queue.remove(item)
-                    for y,x in neighbors(item[0], item[1], False):
+                    for y,x in self.neighbors(item[0], item[1], False):
                         if not (y == self.goalY and x == self.goalX):
-                            newRhs = self.grid[item[0]][item[1]]['g'] + cost(item[1], item[0], x, y)
+                            newRhs = self.grid[item[0]][item[1]]['g'] + self.cost(item[1], item[0], x, y)
                             if newRhs < self.grid[y][x]['rhs']:
                                 self.grid[y][x]['rhs'] = newRhs
                                 self.grid[y][x]['next'] = (item[0], item[1])
-                        updateVertex(x, y)
+                        self.updateVertex(x, y)
                 else:
                     g_old = self.grid[item[0]][item[1]]['g']
                     self.grid[item[0]][item[1]]['g'] = float('inf')
-                    for y,x in neighbors(item[0], item[1], True):
-                        if self.grid[y][x]['rhs'] == cost(item[1], item[0], x, y) + g_old:
+                    for y,x in self.neighbors(item[0], item[1], True):
+                        if self.grid[y][x]['rhs'] == self.cost(item[1], item[0], x, y) + g_old:
                             if not (y == self.goalY and x == self.goalX):
                                 minRhs = float('inf')
-                                for yn, xn in neighbors(y, x, False):
-                                    if minRhs > cost(xn, yn, x, y) + self.grid[yn][xn]['g']:
-                                        minRhs = cost(xn, yn, x, y) + self.grid[yn][xn]['g']
+                                for yn, xn in self.neighbors(y, x, False):
+                                    if minRhs > self.cost(xn, yn, x, y) + self.grid[yn][xn]['g']:
+                                        minRhs = self.cost(xn, yn, x, y) + self.grid[yn][xn]['g']
                                         self.grid[y][x]['next'] = (yn, xn)
                                 self.grid[y][x]['rhs'] = minRhs
-                        updateVertex(x, y)
+                        self.updateVertex(x, y)
+            self.foundPath = True
         except Exception:
+            self.foundPath = False
             print("Cannot find a path")
 
     def cost(self, x1, y1, x2, y2):
-        if self.grid[y1][x1]['open'] == 0 or self.grid[y2][x2]['open'] == 0:
+        if self.grid[y1][x1]['open'] < 1 or self.grid[y2][x2]['open'] < 1:
             return float('inf')
         else:
             return math.hypot(y1 - y2, x1 - x2)
@@ -145,16 +114,66 @@ class PathPlanner():
                 yield toYield[0], toYield[1]
 
     def updatePosition(self, point):
-        self.startX = point.x
-        self.startY = point.y
+        self.startX, self.startY = self.pointToXY(point)
     
     def updateGoal(self, point):
-        self.goalX = point.x
-        self.goalY = point.y
+        self.goalX, self.goalY = self.pointToXY(point)
 
-    def updateGrid(self):
-        #TODO: This
-        print("NYI")
+    def updateGrid(self, msg):
+        if len(self.grid == 0):
+            file = open("../complete_devon.yaml")
+            for line in file:
+                m = re.search("(.+?): (.*)", line)
+                if (m):
+                    if m.group(1) == "resolution":
+                        self.resolution = float(m.group(2))
+                    elif m.group(1) == "origin":
+                        m = re.search("\[(-?\d+\.\d+), (-?\d+\.\d+), -?\d+\.\d+\]", m.group(2))
+                        self.offset = (m.group(1), m.group(2))
+            file.close()
+            for y in msg.data:
+                index = len(grid)
+                self.grid.append([])
+                for x in msg.data[y]:
+                    toAdd = {'open': int(x ), 'rhs': float('inf'), 'g': float('inf'), 'next': None}
+                    self.grid[index].append(toAdd)
+            self.grid[self.goalY][self.goalX]['rhs'] = 0
+            self.queue.put((self.goalY, self.goalX), math.hypot(self.goalX - self.startX, self.goalY - self.startY), 0)
+            self.expandGridWalls()
+            return
+        changes = []
+        for y in msg.data:
+            for x in msg.data[y]:
+                clear = msg.data[y][x] < 20
+                if self.grid[y][x]["open"] != int(clear):
+                    changes.append((x, y, self.grid[y][x]["open"]))
+                    self.grid[y][x] = int(clear)
+        self.expandGridWalls()
+        acted = False
+        for point in changes:
+            if self.grid[point[1]][point[0]]["open"] != point[3]:
+                if not acted:
+                    self.km += math.hypot(self.startY - self.oldY, self.startX - self.oldX)
+                    self.oldX = self.startX
+                    self.oldY = self.startY
+                acted = True
+                for y,x in self.neighbors(point[1], point[0], False):
+                    if self.grid[point[1]][point[0]]["open"] == 1:
+                        if not (y == self.goalY and x == self.goalX):
+                            newRhs = min(self.grid[y][x]["rhs"], self.grid[point[1]][point[0]]["g"] + self.cost(x, y, point[0], point[1]))
+                            if (newRhs < self.grid[y][x]["rhs"]):
+                                self.grid[y][x]["rhs"] = newRhs
+                                self.grid[y][x]["next"] = (point[1], point[0])
+                    elif self.grid[y][x]["next"][0] == point[1] and self.grid[y][x]["next"][1] == point[0]:
+                        if not (y == self.goalY and x == self.goalX):
+                            for y2,x2 in self.neighbors(y, x, False):
+                                newRhs = self.grid[y2][x2]['g'] + self.cost(x2, y2, x, y)
+                                if newRhs < self.grid[y][x]['rhs']:
+                                    self.grid[y][x]['rhs'] = newRhs
+                                    self.grid[y][x]['next'] = (y2, x2)
+                    self.updateVertex(x, y)
+        if (acted):
+            computeShortestPath()
     
     def expandGridWalls(self):
         wallList = []
@@ -162,6 +181,8 @@ class PathPlanner():
             for x in range(len(self.grid[y])):
                 if (self.grid[y][x]["open"] == 0):
                     wallList.append((y, x))
+                if (self.grid[y][x]["open"] == -1):
+                    self.grid[y][x]["open"] == 1
         for point in wallList:
             for i in range(11):
                 for j in range(11):
@@ -170,10 +191,24 @@ class PathPlanner():
                         continue
                     if point[1] >= len(self.grid[0]) or point[1] < 0:
                         continue
-                    self.grid[point[0]][point[1]]["open"] = 0
+                    self.grid[point[0]][point[1]]["open"] = -1
     
-    def pointToXY(self, point):
+    def givePoint(self):
+        if self.foundPath:
+            nextPoint = self.grid[self.startY][self.startX]["next"]
+            self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
+    
+    def xyToPoint(self, x, y):
+        toReturn = Point()
+        toReturn.x = x * self.resolution + self.offset[0]
+        toReturn.y = y * self.resolution + self.offset[1]
+        
 
+    def pointToXY(self, point):
+        return int((point[0] - self.offset[0]) / self.resolution), int((point[1] - self.offset[1]) / self.resolution)
 
     def shutdown(self):
         print("Shutting down")
+
+if __name__ == "__main__":
+    PathPlanner()
