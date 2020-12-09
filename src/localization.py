@@ -11,14 +11,13 @@ from nav_msgs.msg import Odometry
 class Localization():
 
     def odom_callback(self, odom):
-        position = odom.pose.pose.position
-        self.pos.x = position.x + self.offset.x
-        self.pos.y = position.y + self.offset.y
+        self.pos = position = odom.pose.pose.position
+        # self.pos.x += self.offset.x
+        # self.pos.y + = self.offset.y
 
         r = odom.pose.pose.orientation
         self.pos.z = tf.transformations.euler_from_quaternion((r.x, r.y, r.z, r.w))[2]
-        # print(self.pos.z)
-        self.pos.z += self.offset.z
+        # self.pos.z += self.offset.z
 
         self.position_publisher.publish(self.pos)
 

@@ -18,7 +18,8 @@ class Navigation():
     # this should be an odd number
     fuzzy_n_divisions = 21
 
-    min_dist_to_nav_to = 3 # meters
+    min_dist_to_nav_to = 0.5 # meters
+    min_dist_to_avoid = 3
 
     def __init__(self):
         # print('starting up')
@@ -70,8 +71,20 @@ class Navigation():
         if self.is_target_obstructed():
             self.compute_new_target()
         if self.reached_target():
+            # stop moving
+            self.heading = Twist()
+            print(self.target)
+            print(self.goal)
             # set new target (unless we're already at the goal)
-            self.target = self.goal
+            if self.target.x == self.goal.x and self.target.y == self.goal.y:
+                print('self.target == self.goal')
+                print(self.target)
+                print(self.goal)
+                self.target = None
+            else:
+                rospy.loginfo('setting target to goal')
+                self.target = self.goal
+                
         else:
             self.nav_to_target()
 
@@ -89,7 +102,8 @@ class Navigation():
 
         # where should the target be in relation to our heading?
         # can we see in the direction of the target?
-
+        self.heading_to_target = self.calc_target_angle()
+        
         # if (self.pos.z - self.scan.angle_min) % 3.14 < heading_to_target and \
         #         (self.pos.z - self.scan.angle_max) % 3.14 > heading_to_target:
 
@@ -99,20 +113,20 @@ class Navigation():
             
             # we can see the target
             # what's the scan in that direction?
-            offset = int(angle_diff // self.scan.angle_increment)
+            offset = int((angle_diff + self.scan.angle_min/ self.scan.angle_increment))
             
             self.scan_target_index = offset + middle
-            index = self.scan_target_index
+            index_min = min(0, self.scan_target_index - 5)
+            index_max = max(n-1, self.scan_target_index + 5)
+            # print('angle diff is:', angle_diff, self.heading_to_target, n, middle, index)
 
-            print('angle diff is:', angle_diff, self.heading_to_target, n, middle, index)
-
-            if index > middle - 40 and index < middle + 40:
-                # scan through the ranges around it too
-                if not(np.isnan(self.scan.ranges[index-5:index+5]).all()):
-                    if self.dist_to_target() >= np.nanmin(self.scan.ranges[index-5:index+5]):
-                        # there is an object, and it's closer than the target
-                        print('target obstructed')
-                        return True
+            # scan through the ranges around it too
+            if not(np.isnan(self.scan.ranges[index_min : index_max]).all()):
+                if self.dist_to_target() >= np.nanmin(self.scan.ranges[index_min : index_max]):
+                    # there is an object, and it's closer than the target
+                    print('target obstructed')
+                    print(self.heading_to_target, self.pos.z, angle_diff, self.scan.angle_increment, offset, middle)
+                    return True
 
         # return False if we can't see the target
         # print('target not seen / not obstructed')
@@ -130,28 +144,32 @@ class Navigation():
         # find objects around us
         objects = [None]*Navigation.fuzzy_n_divisions
 
+        f = Navigation.fuzzy_n_divisions
+
         for i in range(Navigation.fuzzy_n_divisions):
             # None if there is an object (eg not all values nan)
             # otherwise closest object in the slice
-            all_nan = np.isnan(self.scan.ranges[i*n:(i+1)*n]).all()
+            all_nan = np.isnan(self.scan.ranges[i*f:(i+1)*f]).all()
             if not all_nan:
-                objects[i] = np.nanmin(self.scan.ranges[i*n:(i+1)*n])
+                objects[i] = np.nanmin(self.scan.ranges[i*f:(i+1)*f])
             else:
                 objects[i] = None
         print(objects)
         # determine where to go
         # we want minimal perterbation from the target heading
-        scan_target_n = math.floor(self.scan_target_index / Navigation.fuzzy_n_divisions)
-        print(self.scan_target_index, Navigation.fuzzy_n_divisions, scan_target_n)
+        scan_target_n = int(math.floor((self.scan_target_index / n) * Navigation.fuzzy_n_divisions))
+        print(self.scan_target_index, n, Navigation.fuzzy_n_divisions, scan_target_n)
 
         # should be false, eg there is an object
         if objects[scan_target_n] is None:
             # no obstruction on way to target
+            print('no obstruction on way to target')
             return
         else:
             # how far?
             if objects[scan_target_n] > self.dist_to_target():
                 # we can make it to the target
+                print('we can make it to target')
                 return
 
         # target obstructed
@@ -163,13 +181,15 @@ class Navigation():
             j = i * window
             # first condition is bounds checking the array
             # second is if either there's no the object or the object is further than the target
-            if 0 <= scan_target_n - j and (objects[scan_target_n - j] is None or objects[scan_target_n - j] > Navigation.min_dist_to_nav_to):
-                print('target found on left')
+            if 0 <= scan_target_n - j and (objects[scan_target_n - j] is None 
+                    or objects[scan_target_n - j] > Navigation.min_dist_to_avoid):
+                print('target found on left', scan_target_n - j)
                 # slot has no obstacles
                 target_index = scan_target_n - j
                 break
-            elif n > scan_target_n + j and (objects[scan_target_n + j] is None or objects[scan_target_n + j] > Navigation.min_dist_to_nav_to):
-                print('target found on right')
+            elif n > scan_target_n + j and (objects[scan_target_n + j] is None 
+                    or objects[scan_target_n + j] > Navigation.min_dist_to_avoid):
+                print('target found on right', scan_target_n + j)
                 target_index = scan_target_n + j
                 break
 
@@ -181,15 +201,17 @@ class Navigation():
             # empty thing found at target_index
             # compute new target
             #### ASSUMING THAT LEFT = +, RIGHT = -
-            ang_to_index = self.scan.angle_min + target_index * self.scan.angle_increment
+            ang_to_index = self.scan.angle_min + target_index * Navigation.fuzzy_n_divisions * self.scan.angle_increment
             print('angle to new target is:', ang_to_index)
+
+            self.target = Point()
             self.heading_to_target = self.pos.z + ang_to_index
             # compute x, y from heading, dist (ie convert radians -> cartesian)
             # this will give us the offset of the target from the robot -> use for abs location
             self.target.x = self.pos.x + Navigation.min_dist_to_nav_to * math.cos(self.heading_to_target)
             self.target.y = self.pos.y + Navigation.min_dist_to_nav_to * math.sin(self.heading_to_target)
 
-        self.heading_to_target = self.calc_target_angle()
+            print('new target is', self.target)
 
         return
 
@@ -200,8 +222,6 @@ class Navigation():
                     # we're there!
                     rospy.loginfo('reached target')
                     rospy.loginfo(self.pos)
-                    # stop moving
-                    self.target = None
                     return True
         # rospy.loginfo('not at target')
         return False
@@ -269,7 +289,7 @@ class Navigation():
         rospy.loginfo(self.pos)
 
         self.goal = dest_msg
-        self.target = self.goal
+        self.target = dest_msg
 
         self.heading_to_target = self.calc_target_angle()
 
