@@ -1,0 +1,7 @@
+image: full_devon_map.pgm
+resolution: 0.050000
+origin: [-24.90000, -24.90000, 0.00]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+
