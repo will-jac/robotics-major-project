@@ -364,8 +364,10 @@ class PathPlanner():
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
                 if y == self.goalY and x == self.goalX:
+                    print("Marking goal")
                     file.write(b"\x55")
                 elif y == self.startY and x == self.startX:
+                    print("Marking start")
                     file.write(b"\xAA")
                 else:
                     file.write(b"\x00" if self.grid[y][x]["open"] < 1 else b"\xFE")
