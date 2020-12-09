@@ -18,10 +18,10 @@ class PathPlanner():
         #A bunch of initial variables
         self.grid = []
         self.queue = PriorityQueue()
-        self.goalX = 0
-        self.goalY = 0
-        self.startX = 0
-        self.startY = 0
+        self.goalX = -1
+        self.goalY = -1
+        self.startX = -1
+        self.startY = -1
         self.oldX = 0
         self.oldY = 0
         self.km = 0
@@ -190,16 +190,13 @@ class PathPlanner():
                     self.grid[y][x]["rhs"] = float("inf")
                     self.grid[y][x]["g"] = float("inf")
                     self.grid[y][x]["next"] = None
-            rospy.loginfo("Successfully got through for loop")
             self.foundPath = False
             self.queue = PriorityQueue()
             self.queue.put((self.goalY, self.goalX), math.hypot(self.goalX - self.startX, self.goalY - self.startY), 0)
             if len(self.grid) > 0:
                 self.grid[self.goalY][self.goalX]["rhs"] = 0
                 self.computeShortestPath()
-                rospy.loginfo("Giving point")
                 self.givePoint()
-            rospy.loginfo("Successfully set goal")
         except Exception as e:
             rospy.logerr(e)
 
@@ -313,12 +310,12 @@ class PathPlanner():
         for point in wallList:
             for i in range(11):
                 for j in range(11):
-                    point = (point[0] + i - 5, point[1] + j - 5)
-                    if point[0] >= len(self.grid) or point[0] < 0:
+                    considering = (point[0] + i - 5, point[1] + j - 5)
+                    if considering[0] >= len(self.grid) or considering[0] < 0:
                         continue
-                    if point[1] >= len(self.grid[0]) or point[1] < 0:
+                    if considering[1] >= len(self.grid[0]) or considering[1] < 0:
                         continue
-                    self.grid[point[0]][point[1]]["open"] = -1
+                    self.grid[considering[0]][considering[1]]["open"] = -1
     
     #Respond to a point request
     def givePoint(self):
