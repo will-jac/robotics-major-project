@@ -50,9 +50,9 @@ class Navigation():
         listener = tf2_ros.TransformListener(tfBuffer)
 
         # create some publishers
-        self.nav_blocked_publish = rospy.Publisher('/navigation/blocked', Empty, queue_size=1)
+        self.nav_blocked_publish = rospy.Publisher('/project/replan', Empty, queue_size=1)
         self.vel_publish = rospy.Publisher('/mobile_base/commands/velocity', Twist, queue_size=1)
-        self.target_request_publish = rospy.Publisher('/project/path_planner_request', Empty, queue_size=1)
+        self.target_request_publish = rospy.Publisher('/project/next_point_in_path', Empty, queue_size=1)
 
         # print('starting up')
 
@@ -70,20 +70,23 @@ class Navigation():
         if self.target is None:
             return
         if self.is_target_obstructed():
-            self.compute_new_target()
+            if not self.compute_new_target():
+                # TODO: tell the path planner no path found -> trigger a replan
+                self.nav_blocked_publish.publish()
+
         if self.reached_target():
             # stop moving
             self.heading = Twist()
-            #Send request for next target
-            self.target_request_publish.publish()
-            print(self.target)
-            print(self.goal)
+
             # set new target (unless we're already at the goal)
             if self.target.x == self.goal.x and self.target.y == self.goal.y:
                 print('self.target == self.goal')
                 print(self.target)
                 print(self.goal)
                 self.target = None
+                
+                # Send request for next target
+                self.target_request_publish.publish()
             else:
                 rospy.loginfo('setting target to goal')
                 self.target = self.goal
@@ -138,7 +141,7 @@ class Navigation():
     def compute_new_target(self):
         if self.scan is None:
             print('scan none')
-            return
+            return True
         # we need to find the new target
         # closest point (in the theta dimension) to the target where scan is nan
 
@@ -167,13 +170,13 @@ class Navigation():
         if objects[scan_target_n] is None:
             # no obstruction on way to target
             print('no obstruction on way to target')
-            return
+            return True
         else:
             # how far?
             if objects[scan_target_n] > self.dist_to_target():
                 # we can make it to the target
                 print('we can make it to target')
-                return
+                return True
 
         # target obstructed
 
@@ -198,8 +201,7 @@ class Navigation():
 
         # window found or nothing
         if target_index is None:
-            # TODO: tell the path planner no path found
-            self.nav_blocked_publish.publish()
+            return False
         else:
             # empty thing found at target_index
             # compute new target
@@ -216,7 +218,7 @@ class Navigation():
 
             print('new target is', self.target)
 
-        return
+        return True
 
     def reached_target(self):
         if not (self.target is None):

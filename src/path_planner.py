@@ -1,14 +1,20 @@
-import math
-import re
-from priority_queue import PriorityQueue
+#!/usr/bin/env python
 import rospy
 from geometry_msgs.msg import Point
 from nav_msgs.msg import OccupancyGrid
 from std_msgs.msg import Empty
 
+import math
+import re
+
+from priority_queue import PriorityQueue
+
+
 class PathPlanner():
 
-    def __init__(self):
+    def __init__(self, map_file_path):
+        self.map_file_path = map_file_path
+
         #A bunch of initial variables
         self.grid = []
         self.queue = PriorityQueue()
@@ -21,9 +27,15 @@ class PathPlanner():
         self.km = 0
         self.foundPath = True
 
+        # idk if this is correct
+        self.offset = (0,0)
+        self.resolution = 0.01
+
         #ROS setup stuff
         rospy.init_node('path_planner', anonymous=True)
         rospy.on_shutdown(self.shutdown)
+
+        rospy.loginfo('init path planner with map file ' + self.map_file_path)
 
         #We need so much data
         #Position
@@ -33,16 +45,17 @@ class PathPlanner():
         #Map
         rospy.Subscriber('/map', OccupancyGrid, self.updateGrid)
         #Trigger to send out plan
-        rospy.Subscriber('/project/path_planner_request', Empty, self.givePoint)
+        rospy.Subscriber('/project/next_point_in_path', Empty, self.givePoint)
+
+        rospy.Subscriber('/project/replan_path', Empty, self.replan)
 
         #Sending out data to the navigation layer
-        rospy.Publisher('/project/path_planner', Point, queue_size=1)
+        self.pointPublisher = rospy.Publisher('/project/path_planner', Point, queue_size=1)
 
         #Compute the shortest path, then wait for messages
         self.computeShortestPath()
-        rate = rospy.Rate(1)
-        while not rospy.is_shutdown():
-            rate.sleep()
+        
+        rospy.spin()
 
     #Update vertex keys and have the queue react accordingly
     def updateVertex(self, x, y):
@@ -124,10 +137,11 @@ class PathPlanner():
                         self.updateVertex(x, y)
             #If we got here, we found a path!
             self.foundPath = True
-        except Exception:
+        except Exception as e:
             #Handle path
             self.foundPath = False
-            print("Cannot find a path")
+            rospy.logerr("Cannot find a path")
+            rospy.logerr(e)
 
     #Calculate the cost of an edge. Infinite if impossible, else the cartesian distance.
     def cost(self, x1, y1, x2, y2):
@@ -157,18 +171,24 @@ class PathPlanner():
 
     #Set position
     def updatePosition(self, point):
-        self.startX, self.startY = self.pointToXY(point)
+        # TODO: check if this is correct. pointToXY -> error because offset is a string?
+        self.startX, self.startY = self.pointToXY(point) # point.x, point.y 
     
     #Set goal
     def updateGoal(self, point):
+        rospy.loginfo('path planner goal recieved')
+        rospy.loginfo(point)
         self.goalX, self.goalY = self.pointToXY(point)
+        self.computeShortestPath()
+        self.givePoint()
 
     #Update grid from the map
     def updateGrid(self, msg):
         #If there is no grid
-        if len(self.grid == 0):
+        if len(self.grid) == 0:
             #Check the map settings
-            file = open("../complete_devon.yaml")
+            # TODO: pass this in via launch file
+            file = open(self.map_file_path)
             for line in file:
                 #Read the line
                 m = re.search("(.+?): (.*)", line)
@@ -179,14 +199,17 @@ class PathPlanner():
                     #Get origin
                     elif m.group(1) == "origin":
                         m = re.search("\[(-?\d+\.\d+), (-?\d+\.\d+), -?\d+\.\d+\]", m.group(2))
-                        self.offset = (m.group(1), m.group(2))
+                        # TODO: check this cast to float
+                        self.offset = (float(m.group(1)), float(m.group(2)))
+                        print('setting offset to ', self.offset)
             file.close()
 
             #For each row, mark a row
             for y in msg.data:
-                index = len(grid)
+                index = len(self.grid)
                 self.grid.append([])
                 #For each item in the row, add the corresponding row
+                # TODO: check this, because it throughs an error (x is an int)
                 for x in msg.data[y]:
                     toAdd = {'open': int(msg.data[y][x] < 20), 'rhs': float('inf'), 'g': float('inf'), 'next': None}
                     self.grid[index].append(toAdd)
@@ -273,7 +296,13 @@ class PathPlanner():
         if self.foundPath:
             nextPoint = self.grid[self.startY][self.startX]["next"]
             self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
+        else:
+            rospy.loginfo('no path found!')
     
+    def replan(self):
+        self.computeShortestPath()
+        self.givePoint()
+
     #Convert coordinates to a point
     def xyToPoint(self, x, y):
         toReturn = Point()
@@ -282,7 +311,7 @@ class PathPlanner():
         
     #Convert a point to coordinates
     def pointToXY(self, point):
-        return int((point[0] - self.offset[0]) / self.resolution), int((point[1] - self.offset[1]) / self.resolution)
+        return int((point.x - self.offset[0]) / self.resolution), int((point.x - self.offset[1]) / self.resolution)
 
     #Shut down
     def shutdown(self):
@@ -290,4 +319,6 @@ class PathPlanner():
 
 #Run
 if __name__ == "__main__":
-    PathPlanner()
+    import sys
+
+    PathPlanner(sys.argv[1])
