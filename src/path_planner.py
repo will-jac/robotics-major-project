@@ -204,21 +204,27 @@ class PathPlanner():
                         print('setting offset to ', self.offset)
             file.close()
 
+            # handle map metadata
+            self.resolution = msg.info.resolution
+            self.grid = [[None] * msg.info.width for _ in msg.info.height]
+            
             #For each row, mark a row
-            for y in msg.data:
-                index = len(self.grid)
+            for i in range(msg.info.height):
                 self.grid.append([])
-                #For each item in the row, add the corresponding row
-                # TODO: check this, because it throughs an error (x is an int)
-                for x in msg.data[y]:
-                    toAdd = {'open': int(msg.data[y][x] < 20), 'rhs': float('inf'), 'g': float('inf'), 'next': None}
-                    self.grid[index].append(toAdd)
+                for j in range(msg.info.width):
+                    #For each item in the row, add the corresponding row
+                    # TODO: check this, because it throughs an error (x is an int)
+                    cell = msg.data[i * msg.info.width + j]
+                    toAdd = {'open': int(cell < 20), 'rhs': float('inf'), 'g': float('inf'), 'next': None}
+                    self.grid[i][j] = toAdd
+
             #Set the goal RHS to 0 and put it on the queue
             self.grid[self.goalY][self.goalX]['rhs'] = 0
             self.queue.put((self.goalY, self.goalX), math.hypot(self.goalX - self.startX, self.goalY - self.startY), 0)
             #Make our concept of the walls bigger so we don't hit them
             self.expandGridWalls()
             return
+
         #Keep track of any changes
         changes = []
         #Make changes
