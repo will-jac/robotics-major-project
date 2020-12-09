@@ -14,7 +14,8 @@ import tf2_ros
 
 class Navigation():
 
-    resolution = 0.025
+    resolution = 0.015
+    angularResolution = .1
     # this should be an odd number
     fuzzy_n_divisions = 21
 
@@ -240,7 +241,7 @@ class Navigation():
                     return
 
             # should we change the direction we're heading?
-            if abs(self.pos.z - self.heading_to_target) > Navigation.resolution or abs(self.pos.z - self.heading_to_target) > abs(6.28 - Navigation.resolution):
+            if abs(self.pos.z - self.heading_to_target) > Navigation.angularResolution or abs(self.pos.z - self.heading_to_target) > abs(6.28 - Navigation.resolution):
                 # print('turning', self.pos.z)
                 # reset heading
                 if (self.pos.z - self.heading_to_target < 0):
@@ -250,7 +251,7 @@ class Navigation():
                 self.heading.linear.x = 0.0
             else:
                 # move forwards
-                self.heading.linear.x = 1
+                self.heading.linear.x = .2
                 self.heading.angular.z = 0.0
             # print('naving to target') #, self.heading, self.heading_to_target, self.pos)
 
