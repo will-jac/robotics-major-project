@@ -182,7 +182,12 @@ class PathPlanner():
     #Set position
     def updatePosition(self, point):
         # TODO: check if this is correct. pointToXY -> error because offset is a string?
+        #rospy.loginfo("Setting position")
+        #rospy.loginfo(point)
         self.startX, self.startY = self.pointToXY(point) # point.x, point.y 
+        #rospy.loginfo(self.startX)
+        #rospy.loginfo(self.startY)
+
     
     #Set goal
     def updateGoal(self, point):
@@ -328,7 +333,11 @@ class PathPlanner():
             print(self.foundPath)
             print("I think I found a path")
             nextPoint = self.grid[self.startY][self.startX]["next"]
-            self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
+            if (nextPoint == None):
+                rospy.loginfo('No path found!')
+                return
+            else:
+                self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
         else:
             rospy.loginfo('no path found!')
     
@@ -344,7 +353,7 @@ class PathPlanner():
         
     #Convert a point to coordinates
     def pointToXY(self, point):
-        return int((point.x - self.offset[0]) / self.resolution), int((point.x - self.offset[1]) / self.resolution)
+        return int((point.x - self.offset[0]) / self.resolution), int((point.y - self.offset[1]) / self.resolution)
 
     #Shut down
     def shutdown(self):
