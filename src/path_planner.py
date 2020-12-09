@@ -206,11 +206,10 @@ class PathPlanner():
 
             # handle map metadata
             self.resolution = msg.info.resolution
-            self.grid = [[None] * msg.info.width for _ in msg.info.height]
+            self.grid = [[None] * msg.info.width for _ in range(msg.info.height)]
             
             #For each row, mark a row
             for i in range(msg.info.height):
-                self.grid.append([])
                 for j in range(msg.info.width):
                     #For each item in the row, add the corresponding row
                     # TODO: check this, because it throughs an error (x is an int)
@@ -228,12 +227,15 @@ class PathPlanner():
         #Keep track of any changes
         changes = []
         #Make changes
-        for y in msg.data:
-            for x in msg.data[y]:
-                clear = msg.data[y][x] < 20
-                if self.grid[y][x]["open"] != int(clear):
-                    changes.append((x, y, self.grid[y][x]["open"]))
-                    self.grid[y][x] = int(clear)
+        for i in range(msg.info.height):
+            for j in range(msg.info.width):
+                #For each item in the row, add the corresponding row
+                # TODO: check this, because it throughs an error (x is an int)
+                clear = msg.data[i * msg.info.width + j] < 20
+                if self.grid[i][j]["open"] != int(clear):
+                    changes.append((j, i, self.grid[i][j]["open"]))
+                    self.grid[i][j] = int(clear)
+
         #Do the wall thing again
         self.expandGridWalls()
         #Keep track of if anything changes
