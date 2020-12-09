@@ -22,7 +22,6 @@ class PriorityQueue:
                 index = i
                 minA = self.primaries[i]
                 minB = self.secondaries[i]
-        # print('top key is at', index)
         return int(index)
 
     def pop(self):

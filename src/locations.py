@@ -16,3 +16,14 @@ coordinates = {
     "CS Department": (-16.2, 0),
     "CS Department Door": (-11.75, -1.3)
 }
+
+import os
+
+commentaryMap = {
+    "Attrium": os.path.dirname(os.path.realpath(__file__)) + "../commentary/Atrium.wav",
+    "CS Office": os.path.dirname(os.path.realpath(__file__)) + "../commentary/CSOffice.wav",
+    "East Room": os.path.dirname(os.path.realpath(__file__)) + "../commentary/EastRoom.wav",
+    "West Room": os.path.dirname(os.path.realpath(__file__)) + "../commentary/WestRoom.wav",
+    "Electrical Lab": os.path.dirname(os.path.realpath(__file__)) + "../commentary/ElectricalLab.wav",
+    "CS Department": os.path.dirname(os.path.realpath(__file__)) + "../commentary/CSDepartment.wav"
+}

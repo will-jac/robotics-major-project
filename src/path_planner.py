@@ -6,6 +6,7 @@ from std_msgs.msg import Empty
 
 import math
 import re
+import os
 
 from priority_queue import PriorityQueue
 
@@ -18,14 +19,14 @@ class PathPlanner():
         #A bunch of initial variables
         self.grid = []
         self.queue = PriorityQueue()
-        self.goalX = 0
-        self.goalY = 0
-        self.startX = 0
-        self.startY = 0
+        self.goalX = -1
+        self.goalY = -1
+        self.startX = -1
+        self.startY = -1
         self.oldX = 0
         self.oldY = 0
         self.km = 0
-        self.foundPath = True
+        self.foundPath = False
 
         # idk if this is correct
         self.offset = (0,0)
@@ -48,6 +49,7 @@ class PathPlanner():
         rospy.Subscriber('/project/next_point_in_path', Empty, self.givePoint)
 
         rospy.Subscriber('/project/replan_path', Empty, self.replan)
+        rospy.Subscriber('/project/path_planner_dump', Empty, self.writeMap)
 
         #Sending out data to the navigation layer
         self.pointPublisher = rospy.Publisher('/project/path_planner', Point, queue_size=1)
@@ -136,6 +138,7 @@ class PathPlanner():
                         #Mark in the queue
                         self.updateVertex(x, y)
             #If we got here, we found a path!
+            print("Found a path!")
             self.foundPath = True
         except Exception as e:
             #Handle path
@@ -172,15 +175,33 @@ class PathPlanner():
     #Set position
     def updatePosition(self, point):
         # TODO: check if this is correct. pointToXY -> error because offset is a string?
+        #rospy.loginfo("Setting position")
+        #rospy.loginfo(point)
         self.startX, self.startY = self.pointToXY(point) # point.x, point.y 
+        #rospy.loginfo(self.startX)
+        #rospy.loginfo(self.startY)
+
     
     #Set goal
     def updateGoal(self, point):
         rospy.loginfo('path planner goal recieved')
         rospy.loginfo(point)
         self.goalX, self.goalY = self.pointToXY(point)
-        self.computeShortestPath()
-        self.givePoint()
+        rospy.loginfo("Updated goal:")
+        rospy.loginfo(self.goalX)
+        rospy.loginfo(self.goalY)
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                self.grid[y][x]["rhs"] = float("inf")
+                self.grid[y][x]["g"] = float("inf")
+                self.grid[y][x]["next"] = None
+        self.foundPath = False
+        self.queue = PriorityQueue()
+        self.queue.put((self.goalY, self.goalX), math.hypot(self.goalX - self.startX, self.goalY - self.startY), 0)
+        if len(self.grid) > 0:
+            self.grid[self.goalY][self.goalX]["rhs"] = 0
+            self.computeShortestPath()
+            self.givePoint(None)
 
     #Update grid from the map
     def updateGrid(self, msg):
@@ -292,38 +313,89 @@ class PathPlanner():
         for point in wallList:
             for i in range(11):
                 for j in range(11):
-                    point = (point[0] + i - 5, point[1] + j - 5)
-                    if point[0] >= len(self.grid) or point[0] < 0:
+                    considering = (point[0] + i - 5, point[1] + j - 5)
+                    if considering[0] >= len(self.grid) or considering[0] < 0:
                         continue
-                    if point[1] >= len(self.grid[0]) or point[1] < 0:
+                    if considering[1] >= len(self.grid[0]) or considering[1] < 0:
                         continue
-                    self.grid[point[0]][point[1]]["open"] = -1
+                    self.grid[considering[0]][considering[1]]["open"] = -1
     
     #Respond to a point request
-    def givePoint(self):
+    def givePoint(self, msg):
         if self.foundPath:
+            print(self.foundPath)
+            print("I think I found a path")
             nextPoint = self.grid[self.startY][self.startX]["next"]
-            self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
+            if (nextPoint == None):
+                rospy.loginfo('No path found!')
+                return
+            else:
+                self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
         else:
             rospy.loginfo('no path found!')
     
-    def replan(self):
+    def replan(self, msg):
         self.computeShortestPath()
-        self.givePoint()
+        self.givePoint(None)
 
     #Convert coordinates to a point
     def xyToPoint(self, x, y):
-        toReturn = Point()
+        print("Converting point", x, y, "Which is not the starting point", self.startX, self.startY)
+        toReturn = Point(0, 0, 0)
         toReturn.x = x * self.resolution + self.offset[0]
         toReturn.y = y * self.resolution + self.offset[1]
+        return toReturn
         
     #Convert a point to coordinates
     def pointToXY(self, point):
-        return int((point.x - self.offset[0]) / self.resolution), int((point.x - self.offset[1]) / self.resolution)
+        return int(round((point.x - self.offset[0]) / self.resolution)), int(round((point.y - self.offset[1]) / self.resolution))
 
     #Shut down
     def shutdown(self):
         print("Shutting down")
+    
+    def writeMap(self, msg):
+        print("Dumping map")
+        #Change this to make the dump work
+        #I'm sure there's a way to do this relative but it didn't work when I tried it
+        file = open(os.path.dirname(os.path.realpath(__file__)) + "../map.pgm", 'wb')
+        file.write("P5\n768 704\n255\n")
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                if y == self.goalY and x == self.goalX:
+                    file.write(b"\x55")
+                elif y == self.startY and x == self.startX:
+                    file.write(b"\xAA")
+                else:
+                    file.write(b"\x00" if self.grid[y][x]["open"] < 1 else b"\xFE")
+        file.close()
+
+        file = open(os.path.dirname(os.path.realpath(__file__)) + "../g.pgm", 'wb')
+        file.write("P5\n768 704\n255\n")
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                if (self.grid[y][x]["g"] > 255):
+                    file.write(b"\x00")
+                else:
+                    file.write(bytes([int(255 - self.grid[y][x]["g"])]))
+        file.close()
+
+        file = open(os.path.dirname(os.path.realpath(__file__)) + "../rhs.pgm", 'wb')
+        file.write("P5\n768 704\n255\n")
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                if (self.grid[y][x]["rhs"] > 510):
+                    file.write(b"\x00")
+                else:
+                    file.write(bytes([int(255 - self.grid[y][x]["rhs"] / 2)]))
+        file.close()
+
+        file = open(os.path.dirname(os.path.realpath(__file__)) + "../next.pgm", 'wb')
+        file.write("P5\n768 704\n255\n")
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                file.write(b"\xFE" if self.grid[y][x]["next"] == None else b"\x00")
+        file.close()
 
 #Run
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ import tf2_ros
 
 class Navigation():
 
-    resolution = 0.1
+    resolution = 0.025
     # this should be an odd number
     fuzzy_n_divisions = 21
 
