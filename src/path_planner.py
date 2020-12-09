@@ -42,38 +42,40 @@ def keyComp(A, B):
     return 0
 
 def computeShortestPath():
-    while keyComp(queue.topKey(), calculateKey(startX, startY)) == -1 or grid[startY][startX]['rhs'] > grid[startY][startX]['g']:
-        item = queue.peek()
-        k_old = queue.topKey()
-        k_new = calculateKey(item[1], item[0])
-        if keyComp(k_old, k_new) == -1:
-            queue.update(item, k_new[0], k_old[1])
-        elif grid[item[0]][item[1]]['g'] > grid[item[0]][item[1]]['rhs']:
-            grid[item[0]][item[1]]['g'] = grid[item[0]][item[1]]['rhs']
-            queue.remove(item)
-            for y,x in neighbors(item[0], item[1], False):
-                if not (y == goalY and x == goalY):
-                    newRhs = grid[item[0]][item[1]]['g'] + cost(item[1], item[0], x, y)
-                    if newRhs < grid[y][x]['rhs']:
-                        grid[y][x]['rhs'] = newRhs
-                        grid[y][x]['next'] = (item[0], item[1])
-                updateVertex(x, y)
-        else:
-            g_old = grid[item[0]][item[1]]['g']
-            grid[item[0]][item[1]]['g'] = float('inf')
-            for y,x in neighbors(item[0], item[1], True):
-                if grid[y][x]['rhs'] == cost(item[1], item[0], x, y) + g_old:
+    try:
+        while keyComp(queue.topKey(), calculateKey(startX, startY)) == -1 or grid[startY][startX]['rhs'] > grid[startY][startX]['g']:
+            item = queue.peek()
+            k_old = queue.topKey()
+            k_new = calculateKey(item[1], item[0])
+            if keyComp(k_old, k_new) == -1:
+                queue.update(item, k_new[0], k_old[1])
+            elif grid[item[0]][item[1]]['g'] > grid[item[0]][item[1]]['rhs']:
+                grid[item[0]][item[1]]['g'] = grid[item[0]][item[1]]['rhs']
+                queue.remove(item)
+                for y,x in neighbors(item[0], item[1], False):
                     if not (y == goalY and x == goalY):
-                        minRhs = float('inf')
-                        for yn, xn in neighbors(y, x, False):
-                            if minRhs > cost(xn, yn, x, y) + grid[yn][xn]['g']:
-                                minRhs = cost(xn, yn, x, y) + grid[yn][xn]['g']
-                                grid[y][x]['next'] = (yn, xn)
-                        grid[y][x]['rhs'] = minRhs
-                updateVertex(x, y)
+                        newRhs = grid[item[0]][item[1]]['g'] + cost(item[1], item[0], x, y)
+                        if newRhs < grid[y][x]['rhs']:
+                            grid[y][x]['rhs'] = newRhs
+                            grid[y][x]['next'] = (item[0], item[1])
+                    updateVertex(x, y)
+            else:
+                g_old = grid[item[0]][item[1]]['g']
+                grid[item[0]][item[1]]['g'] = float('inf')
+                for y,x in neighbors(item[0], item[1], True):
+                    if grid[y][x]['rhs'] == cost(item[1], item[0], x, y) + g_old:
+                        if not (y == goalY and x == goalY):
+                            minRhs = float('inf')
+                            for yn, xn in neighbors(y, x, False):
+                                if minRhs > cost(xn, yn, x, y) + grid[yn][xn]['g']:
+                                    minRhs = cost(xn, yn, x, y) + grid[yn][xn]['g']
+                                    grid[y][x]['next'] = (yn, xn)
+                            grid[y][x]['rhs'] = minRhs
+                    updateVertex(x, y)
+    except Exception:
+        print("Cannot find a path")
 
 def cost(x1, y1, x2, y2):
-    print(x1, y1, x2, y2)
     if grid[y1][x1]['open'] == 0 or grid[y2][x2]['open'] == 0:
         return float('inf')
     else:
@@ -83,7 +85,6 @@ def calculateKey(x, y):
     return [min(grid[y][x]['g'], grid[y][x]['rhs']) + math.hypot(x - startX, y - startY) + km, min(grid[y][x]['g'], grid[y][x]['rhs'])]
 
 def neighbors(y, x, includeSelf):
-    print(x, y)
     for i in range(3):
         for j in range(3):
             toYield = (y + i - 1, x + j - 1)
@@ -105,6 +106,9 @@ def main():
         if (grid[nextY][nextX]['next'] == None):
             break
         nextX, nextY = grid[nextY][nextX]['next'][1], grid[nextY][nextX]['next'][0]
+    for i in range(len(grid)):
+        for j in range(len(grid[i])):
+            print("x:", j, "y:", i, "rhs:", grid[i][j]["rhs"], "g:", grid[i][j]["g"], "next:", grid[i][j]["next"])
 
 def updateGrid():
     #TODO: This

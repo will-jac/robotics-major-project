@@ -22,7 +22,7 @@ class PriorityQueue:
                 index = i
                 minA = self.primaries[i]
                 minB = self.secondaries[i]
-        return i
+        return index
 
     def pop(self):
         index = self.getNextIndex()
