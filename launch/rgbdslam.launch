@@ -27,6 +27,7 @@
     <param name="config/backend_solver"                value="pcg"/> <!-- pcg is fast and good for online operation -->
     <param name="config/cloud_creation_skip_step"      value="16"/> <!-- Heavily subsample point cloud during creation -->
   
+    <param name="config/start_paused" value="true"/>
 
     <param name="config/use_robot_odom" value="true"/>
     <param name="config/use_odom_for_prediction" value="true"/>

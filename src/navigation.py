@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import rospy
 
-from geometry_msgs.msg import Twist, Vector3, Point, Pose
+from geometry_msgs.msg import Twist, Vector3, Point, Pose, PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Empty
@@ -14,7 +14,7 @@ import tf2_ros
 
 class Navigation():
 
-    resolution = 0.01
+    resolution = 0.1
     # this should be an odd number
     fuzzy_n_divisions = 21
     odom_timeout = 10
@@ -26,11 +26,11 @@ class Navigation():
         
         self.goal = None
         self.target = None
-        self.pos = Point
+        self.pos = Point()
+        self.heading_to_target = 0.0
         self.scan = None
         self.heading = Twist()
         self.odom_counter = 0
-
         
         # create a navigation node
         rospy.init_node('navigation', anonymous=True)
@@ -38,8 +38,12 @@ class Navigation():
         rospy.on_shutdown(self.shutdown)
 
         # listen to the path planner
-        # rospy.Subscriber('/project/path_planner', Vector3, self.set_goal)
-        # rospy.Subscriber('/odom', Odometry, self.update_odom_pos)
+        rospy.Subscriber('/project/path_planner', Point, self.set_goal)
+        # rospy.Subscriber('/amcl_pos', PoseWithCovarianceStamped, self.update_amcl_pos)
+        rospy.Subscriber('/odom', Odometry, self.update_amcl_pos)
+        rospy.Subscriber('/scan', LaserScan, self.update_scan)
+
+
 
         # listen to SLAM    
         tfBuffer = tf2_ros.Buffer()
@@ -51,33 +55,34 @@ class Navigation():
 
         # print('starting up')
 
-        rate = rospy.Rate(1)
+        rate = rospy.Rate(10)
         # Keep self from shutting down until killed
         while not rospy.is_shutdown():
-            try:
-                trans = tfBuffer.lookup_transform('map', 'base_link', rospy.Time())
-                # cool, now we have the transform
-                # this gives us a translation / rotation from wherever the robot started (0,0,0) to where it is now
-                # TODO: account for inital position
-                if (trans.transform is None):
-                    continue
-                self.pos.x = trans.transform.translation.x
-                self.pos.y = trans.transform.translation.y
-                r = trans.transform.rotation
-                euler = tf.transformations.euler_from_quaternion([r.x, r.y, r.z, r.w])
-                self.pos.z = euler[2]
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-                rate.sleep()
-                continue
+            # try:
+            #     trans = tfBuffer.lookup_transform('map', 'base_link', rospy.Time())
+            #     # cool, now we have the transform
+            #     # this gives us a translation / rotation from wherever the robot started (0,0,0) to where it is now
+            #     # TODO: account for inital position
+            #     if (trans.transform is None):
+            #         continue
+            #     self.pos.x = trans.transform.translation.x
+            #     self.pos.y = trans.transform.translation.y
+            #     r = trans.transform.rotation
+            #     euler = tf.transformations.euler_from_quaternion([r.x, r.y, r.z, r.w])
+            #     self.pos.z = euler[2]
+            # except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            #     rate.sleep()
+            #     continue
             self.navigate()
-            #self.vel_publish.publish(self.heading)
+            self.vel_publish.publish(self.heading)
             rate.sleep()
-
 
     def shutdown(self):
         print('bye bye')
 
     def navigate(self):
+        if self.target is None:
+            return
         if self.is_target_obstructed():
             self.compute_new_target()
         if self.reached_target():
@@ -88,11 +93,13 @@ class Navigation():
 
     def is_target_obstructed(self):
         if self.scan is None:
+            print('scan is none')
             return False
 
         n = len(self.scan.ranges)
         if n == 0:
             # bad scan
+            print('bad scan')
             return False
 
         # where should the target be in relation to our heading?
@@ -102,23 +109,27 @@ class Navigation():
         #         (self.pos.z - self.scan.angle_max) % 3.14 > heading_to_target:
         
         # angle_diff < scan_angle_range
-        angle_diff = self.pos.z - heading_to_target
-        if angle_diff < self.scan.angle_max - self.scan.angle_min:
+        angle_diff = self.pos.z - self.heading_to_target
+        if abs(angle_diff) < abs(self.scan.angle_max - self.scan.angle_min):
             # we can see the target
             # what's the scan in that direction?
-            self.scan_target_index = angle_diff // self.scan.angle_increment
+            self.scan_target_index = int(angle_diff // self.scan.angle_increment)
+            index = self.scan_target_index
             if index > 5 and index < n - 5:
                 # scan through the ranges around it too 
                 if not(np.isnan(self.scan.ranges[index-5:index+5]).all()):
                     if self.dist_to_target() >= np.nanmin(self.scan.ranges[index-5:index+5]):
                         # there is an object, and it's closer than the target
+                        print('target obstructed')
                         return True
 
         # return False if we can't see the target 
+        print('target not seen / not obstructed')
         return False
     
     def compute_new_target(self):
         if self.scan is None:
+            print('scan none')
             return
         # we need to find the new target
         # closest point (in the theta dimension) to the target where scan is nan
@@ -126,7 +137,8 @@ class Navigation():
         n = len(self.scan.ranges)
         
         # find objects around us
-        objects = [None]*n
+        objects = [None]*Navigation.fuzzy_n_divisions
+
         for i in range(Navigation.fuzzy_n_divisions):
             # None if there is an object (eg not all values nan)
             # otherwise closest object in the slice
@@ -135,9 +147,11 @@ class Navigation():
                 objects[i] = np.nanmin(self.scan.ranges[i*n:(i+1)*n])               
             else:
                 objects[i] = None
+        print(objects)
         # determine where to go
         # we want minimal perterbation from the target heading
-        scan_target_n = self.scan_target_index / (Navigation.fuzzy_n_divisions / n)
+        scan_target_n = int(self.scan_target_index // Navigation.fuzzy_n_divisions)
+        print(scan_target_n)
         
         # should be false, eg there is an object
         if objects[scan_target_n] is None:
@@ -188,30 +202,36 @@ class Navigation():
     def reached_target(self):
         if not (self.target is None):
             if abs(self.pos.x - self.target.x) < Navigation.resolution:
-                if abs(self.pos.y - self.target.y) > Navigation.resolution:
+                if abs(self.pos.y - self.target.y) < Navigation.resolution:
                     # we're there!
                     rospy.loginfo('reached target')
                     rospy.loginfo(self.pos)
                     return True
+        rospy.loginfo('not at target')
         return False
 
     def nav_to_target(self):
         # calculate where to go (nav to the target)
         if not (self.target is None):
             if abs(self.pos.x - self.target.x) < Navigation.resolution:
-                if abs(self.pos.y - self.target.y) > Navigation.resolution:
+                if abs(self.pos.y - self.target.y) < Navigation.resolution:
                     # at target
                     return
             
             # should we change the direction we're heading?
-            if abs(self.pos.z - self.heading_to_target) % 3.14 < Navigation.resolution:
+            if abs(self.pos.z - self.heading_to_target) > Navigation.resolution or abs(self.pos.z - self.heading_to_target) > abs(6.28 - Navigation.resolution):
+                print('turning', self.pos.z)
                 # reset heading
-                self.heading.angular.z = self.heading_to_target
+                if (self.pos.z - self.heading_to_target < 0):
+                    self.heading.angular.z = 0.5
+                else:
+                    self.heading.angular.z = -0.5
                 self.heading.linear.x = 0.0
             else:
                 # move forwards
                 self.heading.linear.x = 0.5
                 self.heading.angular.z = 0.0
+            print('naving to target', self.heading, self.heading_to_target)
     
     def calc_target_angle(self):
         delta_x = self.target.x - self.pos.x
@@ -240,6 +260,7 @@ class Navigation():
                     # become positive
                     dest_ang += math.pi
 
+        print('heading to target', dest_ang)
         return dest_ang
 
     def dist_to_target(self):
@@ -248,6 +269,7 @@ class Navigation():
     def set_goal(self, dest_msg):
         rospy.loginfo('recieved goal:')
         rospy.loginfo(dest_msg)
+
         self.goal = dest_msg
         self.target = self.goal
 
@@ -256,6 +278,12 @@ class Navigation():
             # bad scan
             return 
         self.scan = scan
+
+    def update_amcl_pos(self, data):
+        self.pos = data.pose.pose.position
+        r = data.pose.pose.orientation
+        euler = tf.transformations.euler_from_quaternion([r.x, r.y, r.z, r.w])
+        self.pos.z = euler[2]
 
 if __name__ == "__main__":
     Navigation()

@@ -1,5 +1,5 @@
 <launch>
-  <arg name="world_file"  default="$(find robotics-major-project)/project_modified.world"/>
+  <arg name="world_file"  default="$(find robotics-major-project)/devon.world"/>
 
   <!-- Env variables -->
   <arg name="base"      value="$(optenv TURTLEBOT_BASE kobuki)"/> <!-- create, roomba -->
@@ -44,11 +44,12 @@
   
   <!-- <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping">
     <param name="scan" value="base_scan"/>
-  </node>
+  </node> -->
+  <!-- <include file="$(find turtlebot_navigation)/launch/includes/gmapping/$(arg 3d_sensor)_gmapping.launch.xml"/> -->
 
-  <launch>
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find turtlebot_rviz_launchers)/rviz/navigation.rviz"/>
-</launch> -->
+  <!-- <launch> -->
+    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find turtlebot_rviz_launchers)/rviz/navigation.rviz"/> -->
+  <!-- </launch> -->
 
 
   <!-- <include file="$(find hector_slam_launch)/launch/tutorial.launch"/> -->
@@ -57,21 +58,27 @@
   
   <!-- Project nodes -->
   <node pkg="robotics-major-project" type="navigation.py" name="navigation" output="screen" />
+  <node pkg="robotics-major-project" type="localization.py" name="localization" />
 
   <!-- RGBD SLAM -->
-  <include file="$(find robotics-major-project)/launch/rgbdslam.launch" />
+  <!-- <include file="$(find robotics-major-project)/launch/rgbdslam.launch" /> -->
   
   <!-- Octomap -->
-  <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
-    <param name="resolution" value="0.05" />
-    <!-- Fixed frame ID -->
+  <!-- <node pkg="octomap_server" type="octomap_server_node" name="octomap_server" args="$(find robotics-major-project)/devon_test_2.ot">
+    <param name="resolution" value="0.05" /> 
     <param name="frame_id" type="string" value="map" />
-    <!-- Max range to integrate -->
     <param name="sensor_model/max_range" value="5.0" />
-    <!-- remap to the rgbdslam PointCloud2 topic -->
     <remap from="cloud_in" to="rgbdslam/online_clouds"/>
-  </node>
+  </node> -->
 
   
+  <!-- AMCL -->
+  <include file="$(find turtlebot_navigation)/launch/includes/amcl/amcl.launch.xml">
+    <arg name="scan_topic" value="scan"/>
+    <arg name="use_map_topic" value="true"/>
+    <arg name="initial_pose_x" value="0"/>
+    <arg name="initial_pose_y" value="0"/>
+    <arg name="initial_pose_a" value="0"/>
+  </include>
 
 </launch>
