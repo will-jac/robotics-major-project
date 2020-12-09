@@ -311,8 +311,8 @@ class PathPlanner():
                     self.grid[y][x]["open"] == 1
         #Make all the cells close to walls closed off
         for point in wallList:
-            for i in range(11):
-                for j in range(11):
+            for i in range(round(.25 / self.resolution) * 2 + 1):
+                for j in range(round(.25 / self.resolution) * 2 + 1):
                     considering = (point[0] + i - 5, point[1] + j - 5)
                     if considering[0] >= len(self.grid) or considering[0] < 0:
                         continue
@@ -360,7 +360,7 @@ class PathPlanner():
         #Change this to make the dump work
         #I'm sure there's a way to do this relative but it didn't work when I tried it
         file = open(os.path.dirname(os.path.realpath(__file__)) + "/../map.pgm", 'wb')
-        file.write("P5\n768 704\n255\n")
+        file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
                 if y == self.goalY and x == self.goalX:
@@ -372,7 +372,7 @@ class PathPlanner():
         file.close()
 
         file = open(os.path.dirname(os.path.realpath(__file__)) + "/../g.pgm", 'wb')
-        file.write("P5\n768 704\n255\n")
+        file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
                 if (self.grid[y][x]["g"] > 255):
@@ -382,7 +382,7 @@ class PathPlanner():
         file.close()
 
         file = open(os.path.dirname(os.path.realpath(__file__)) + "/../rhs.pgm", 'wb')
-        file.write("P5\n768 704\n255\n")
+        file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
                 if (self.grid[y][x]["rhs"] > 510):
@@ -392,7 +392,7 @@ class PathPlanner():
         file.close()
 
         file = open(os.path.dirname(os.path.realpath(__file__)) + "/../next.pgm", 'wb')
-        file.write("P5\n768 704\n255\n")
+        file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
                 file.write(b"\xFE" if self.grid[y][x]["next"] == None else b"\x00")
