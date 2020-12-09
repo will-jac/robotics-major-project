@@ -1,6 +1,18 @@
 coordinates = {
-    "Advising Office": (4, 0),
-    "Workshop": (10, 15),
-    "Turtle Cage": (18, 32),
-    "Map": (0, 0)
+    "Attrium": (3, -13),
+    "Attrium Door 1": (13.26, -10.26),
+    "Attrium Door 2": (-7.3, -10.26),
+    "CS Office": (11.51, -5.83),
+    "CS Office Door": (14.63, -7.77),
+    "East Room": (6, 4),
+    "East Room Door 1": (11.5, 0),
+    "East Room Door 2": (1.6, 0),
+    "West Room": (-4.4, 4),
+    "West Room Door 1": (-0.6, 0),
+    "West Room Door 2": (-8, 0),
+    "Electrical Lab": (0, 6),
+    "Electrical Lab Door 1": (5.65, -4),
+    "Electrical Lab Door 2": (-4.4, 4.1),
+    "CS Department": (-16.2, 0),
+    "CS Department Door": (-11.75, -1.3)
 }
