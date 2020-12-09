@@ -1,7 +1,8 @@
 import math
+import re
 from priority_queue import PriorityQueue
 import rospy
-import tf2_ros
+from geometry_msgs.msg import Point
 
 class PathPlanner():
 
@@ -16,16 +17,17 @@ class PathPlanner():
         self.oldY = 0
         self.km = 0
 
-        tfBuffer = tf2_ros.Buffer()
-        self.listener = tf2_ros.TransformListener(tfBuffer)
-        
+        rospy.init_node('path_planner', anonymous=True)
+        rospy.on_shutdown(self.shutdown)
+
+        rospy.Subscriber('/project/pose', Point, self.updatePosition)
+        rospy.Subscriber('/project/target', Point, self.updateGoal)
+
         self.initializeGrid()
-        self.updatePosition()
 
         self.computeShortestPath()
         rate = rospy.Rate(1)
         while not rospy.is_shutdown():
-            self.updatePosition()
             self.computeShortestPath()
             self.updateGrid()
             rate.sleep()
@@ -42,7 +44,18 @@ class PathPlanner():
 
 
     def initializeGrid(self):
-        file = open("map.txt")
+        file = open("../complete_devon.yaml")
+        for line in file:
+            m = re.search("(.+?): (.*)", line)
+            if (m):
+                if m.group(1) == "resolution":
+                    self.resolution = float(m.group(2))
+                elif m.group(1) == "origin":
+                    m = re.search("\[(-?\d+\.\d+), (-?\d+\.\d+), -?\d+\.\d+\]", m.group(2))
+                    self.offset = (m.group(1), m.group(2))
+        file.close()
+
+        file = open(self.image)
         for line in file:
             index = len(self.grid)
             self.grid.append([])
@@ -53,6 +66,7 @@ class PathPlanner():
         file.close()
         self.grid[self.goalY][self.goalX]['rhs'] = 0
         self.queue.put((self.goalY, self.goalX), math.hypot(self.goalX - self.startX, self.goalY - self.startY), 0)
+        self.expandGridWalls()
 
     def updateVertex(self, x, y):
         if self.grid[y][x]['g'] != self.grid[y][x]['rhs'] and self.queue.includes((y, x)):
@@ -130,15 +144,13 @@ class PathPlanner():
                     continue
                 yield toYield[0], toYield[1]
 
-    def updatePosition(self):
-        try:
-            trans = tfBuffer.lookup_transform('map', 'base_link', rospy.Time())
-            if (trans.transform is None):
-                continue
-            self.startX = trans.transform.translation.x
-            self.startY = trans.transform.translation.y
-        except:
-            pass
+    def updatePosition(self, point):
+        self.startX = point.x
+        self.startY = point.y
+    
+    def updateGoal(self, point):
+        self.goalX = point.x
+        self.goalY = point.y
 
     def updateGrid(self):
         #TODO: This
@@ -151,11 +163,17 @@ class PathPlanner():
                 if (self.grid[y][x]["open"] == 0):
                     wallList.append((y, x))
         for point in wallList:
-            for i in range(3):
-                for j in range(3):
-                    point = (point[0] + i - 1, point[1] + j - 1)
+            for i in range(11):
+                for j in range(11):
+                    point = (point[0] + i - 5, point[1] + j - 5)
                     if point[0] >= len(self.grid) or point[0] < 0:
                         continue
                     if point[1] >= len(self.grid[0]) or point[1] < 0:
                         continue
                     self.grid[point[0]][point[1]]["open"] = 0
+    
+    def pointToXY(self, point):
+
+
+    def shutdown(self):
+        print("Shutting down")
