@@ -319,8 +319,6 @@ class PathPlanner():
     #Respond to a point request
     def givePoint(self, msg):
         if self.foundPath:
-            print(self.foundPath)
-            print("I think I found a path")
             nextPoint = self.grid[self.startY][self.startX]["next"]
             if (nextPoint == None):
                 self.nextRequest.publish()
@@ -330,6 +328,10 @@ class PathPlanner():
                 self.pointPublisher.publish(toPublish)
                 return
             else:
+                i = 0
+                while self.grid[nextPoint[0]][nextPoint[1]]["next"] != None and i < 5:
+                    nextPoint = self.grid[nextPoint[0]][nextPoint[1]]["next"]
+                    i += 1
                 self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
         else:
             rospy.loginfo('no path found!')

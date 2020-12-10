@@ -1,7 +1,7 @@
 coordinates = {
-    "Attrium": (3, -13),
-    "Attrium Door 1": (13.26, -10.26),
-    "Attrium Door 2": (-7.3, -10.26),
+    "Atrium": (3, -13),
+    "Atrium Door 1": (13.26, -10.26),
+    "Atrium Door 2": (-7.3, -10.26),
     "CS Office": (11.51, -5.83),
     "CS Office Door": (14.63, -7.77),
     "East Room": (6, 4),
@@ -21,7 +21,7 @@ coordinates = {
 import os
 
 commentaryMap = {
-    "Attrium": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/Atrium.wav",
+    "Atrium": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/Atrium.wav",
     "CS Office": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/CSOffice.wav",
     "East Room": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/EastRoom.wav",
     "West Room": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/WestRoom.wav",
