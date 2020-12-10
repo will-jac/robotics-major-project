@@ -7,9 +7,10 @@ from playsound import playsound
 class Commentary():
 
     def __init__(self):
+        self.shouldPlay = True
         rospy.init_node('commentary', anonymous=True)
         rospy.on_shutdown(self.shutdown)
-        rospy.Subscriber('/project/pose', Point, self.update_pos)
+        rospy.Subscriber('/project/pose', Point, self.update_pos, queue_size=1)
 
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
@@ -20,9 +21,13 @@ class Commentary():
         y = round(point.y)
         for key in commentaryMap.keys():
             if round(coordinates[key][0]) == x and round(coordinates[key][1]) == y:
+                print(x)
+                print(y)
                 print("Playing some commentary")
-                playsound(commentaryMap[key], True)
-                return
+                if self.shouldPlay:
+                    playsound(commentaryMap[key], True)
+                    return
+        self.shouldPlay = False
 
     def shutdown(self):
         playsound(None)
