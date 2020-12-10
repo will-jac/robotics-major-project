@@ -324,9 +324,11 @@ class PathPlanner():
             nextPoint = self.grid[self.startY][self.startX]["next"]
             if (nextPoint == None):
                 rospy.loginfo('No path found!')
+                toPublish = self.xyToPoint(self.goalX, self.goalY)
+                toPublish.z = -1
+                self.pointPublisher.publish(toPublish)
                 return
             else:
-
                 self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
         else:
             rospy.loginfo('no path found!')

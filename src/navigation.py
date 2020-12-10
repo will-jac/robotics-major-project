@@ -14,7 +14,7 @@ import tf2_ros
 
 class Navigation():
 
-    resolution = 0.015
+    resolution = 0.02
     angularResolution = .1
     # this should be an odd number
     fuzzy_n_divisions = 21
@@ -78,7 +78,11 @@ class Navigation():
 
         if self.reached_target():
             # stop moving
-            self.heading = Twist()
+            if self.target.z == -1:
+                self.heading = Twist()
+            else:
+                self.heading = Twist()
+                self.heading.linear.x = 0.1
 
             # set new target (unless we're already at the goal)
             if self.target.x == self.goal.x and self.target.y == self.goal.y:
