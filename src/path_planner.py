@@ -222,7 +222,7 @@ class PathPlanner():
             file.close()
 
             # handle map metadata
-            # self.resolution = msg.info.resolution
+            self.resolution = 0.3
             self.grid = [[None] * msg.info.width for _ in range(msg.info.height)]
             
             #For each row, mark a row
