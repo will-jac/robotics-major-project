@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from locations import *
 
 from Tkinter import *
@@ -49,7 +50,7 @@ class Commentary():
         min_index = -1
         min_dist = -1
         for i in self.list.curselection():
-            if i == "Atrium":
+            if self.order[i] == "Atrium":
                 self.points.append(coordinates[self.order[i]])
                 visited_indexes.append(0)
             else:
@@ -79,6 +80,7 @@ class Commentary():
             toPublish.y = self.points[0][1]
             self.out.publish(toPublish)
             del self.points[0]
+            print(self.points)
         
 
 if __name__ == "__main__":

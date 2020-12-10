@@ -86,8 +86,12 @@ class PathPlanner():
     def computeShortestPath(self):
         #Throws an error when there is no path
         try:
+            times = 0
             #Run until we've passed the start in our max reach and the start needs to be measured
             while self.keyComp(self.queue.topKey(), self.calculateKey(self.startX, self.startY)) == -1 or self.grid[self.startY][self.startX]['rhs'] > self.grid[self.startY][self.startX]['g']:
+                #print(self.keyComp(self.queue.topKey(), self.calculateKey(self.startX, self.startY)))
+                #print(self.grid[self.startY][self.startX]['rhs'])
+                #print(self.grid[self.startY][self.startX]['g'])
                 #Get the top item
                 item = self.queue.peek()
                 #Get the top key and check what it should be
@@ -307,8 +311,8 @@ class PathPlanner():
                     self.grid[y][x]["open"] == 1
         #Make all the cells close to walls closed off
         for point in wallList:
-            for i in range(int(round(.3 / self.resolution) * 2 + 1)):
-                for j in range(int(round(.3 / self.resolution) * 2 + 1)):
+            for i in range(int(round(.35 / self.resolution) * 2 + 1)):
+                for j in range(int(round(.35 / self.resolution) * 2 + 1)):
                     considering = (point[0] + i - 5, point[1] + j - 5)
                     if considering[0] >= len(self.grid) or considering[0] < 0:
                         continue
@@ -378,20 +382,20 @@ class PathPlanner():
         file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
-                if (self.grid[y][x]["g"] > 255):
+                if (self.grid[y][x]["g"] > 1000):
                     file.write(b"\x00")
                 else:
-                    file.write(bytes([int(255 - self.grid[y][x]["g"])]))
+                    file.write(bytes([int(255 - self.grid[y][x]["g"] / 4)])[0])
         file.close()
 
         file = open(os.path.dirname(os.path.realpath(__file__)) + "/../rhs.pgm", 'wb')
         file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
-                if (self.grid[y][x]["rhs"] > 510):
+                if (self.grid[y][x]["rhs"] > 1000):
                     file.write(b"\x00")
                 else:
-                    file.write(bytes([int(255 - self.grid[y][x]["rhs"] / 2)]))
+                    file.write(bytes([int(255 - self.grid[y][x]["rhs"] / 4)])[0])
         file.close()
 
         file = open(os.path.dirname(os.path.realpath(__file__)) + "/../next.pgm", 'wb')
@@ -399,6 +403,13 @@ class PathPlanner():
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
                 file.write(b"\xFE" if self.grid[y][x]["next"] == None else b"\x00")
+        file.close()
+
+        file = open(os.path.dirname(os.path.realpath(__file__)) + "/../open.pgm", 'wb')
+        file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                file.write(b"\xFE" if (x, y) in self.queue.items else b"\x00")
         file.close()
 
 #Run
