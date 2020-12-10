@@ -46,6 +46,7 @@
   <node pkg="robotics-major-project" type="navigation.py" name="navigation" output="screen" />
   <node pkg="robotics-major-project" type="localization.py" name="localization" output="screen" />
   <node pkg="robotics-major-project" type="path_planner.py" name="path_planner" output="screen" args="$(arg map_file)" />
+  <node pkg="robotics-major-project" type="gui.py" name="gui" output="screen" />
 
 
   <!-- <include file="$(find turtlebot_rviz_launchers)/launch/view_navigation.launch"/> -->
