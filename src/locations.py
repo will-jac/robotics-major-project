@@ -14,7 +14,8 @@ coordinates = {
     "Electrical Lab Door 1": (5.65, -4),
     "Electrical Lab Door 2": (-4.4, 4.1),
     "CS Department": (-16.2, 0),
-    "CS Department Door": (-11.75, -1.3)
+    "CS Department Door": (-11.75, -1.3),
+    "Test": (0, 5)
 }
 
 import os
@@ -25,5 +26,6 @@ commentaryMap = {
     "East Room": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/EastRoom.wav",
     "West Room": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/WestRoom.wav",
     "Electrical Lab": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/ElectricalLab.wav",
-    "CS Department": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/CSDepartment.wav"
+    "CS Department": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/CSDepartment.wav",
+    "Test": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/ElectricalLab.wav"
 }

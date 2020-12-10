@@ -57,7 +57,7 @@ class Navigation():
 
         # print('starting up')
 
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(100)
         # Keep self from shutting down until killed
         while not rospy.is_shutdown():
             self.navigate()

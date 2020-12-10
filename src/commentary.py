@@ -23,6 +23,7 @@ class Commentary():
                 return
 
     def shutdown(self):
+        playsound(None)
         print("Fine, I'll shut up")
 
 if __name__ == "__main__":
