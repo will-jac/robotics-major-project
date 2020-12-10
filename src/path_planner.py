@@ -307,8 +307,8 @@ class PathPlanner():
                     self.grid[y][x]["open"] == 1
         #Make all the cells close to walls closed off
         for point in wallList:
-            for i in range(int(round(.25 / self.resolution) * 2 + 1)):
-                for j in range(int(round(.25 / self.resolution) * 2 + 1)):
+            for i in range(int(round(.35 / self.resolution) * 2 + 1)):
+                for j in range(int(round(.35 / self.resolution) * 2 + 1)):
                     considering = (point[0] + i - 5, point[1] + j - 5)
                     if considering[0] >= len(self.grid) or considering[0] < 0:
                         continue
@@ -329,7 +329,7 @@ class PathPlanner():
                 return
             else:
                 i = 0
-                while self.grid[nextPoint[0]][nextPoint[1]]["next"] != None and i < 5:
+                while self.grid[nextPoint[0]][nextPoint[1]]["next"] != None and i < 8:
                     nextPoint = self.grid[nextPoint[0]][nextPoint[1]]["next"]
                     i += 1
                 self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
