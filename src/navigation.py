@@ -12,10 +12,16 @@ import numpy as np
 
 import tf2_ros
 
+# from the python3 docs
+def isclose(a,b,rel_tol=1e-08, abs_tol=0.01):
+    abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
 class Navigation():
 
-    resolution = 0.1
-    ang_resolution = 0.05
+    # this needs to be big to prevent angle differences from causing problems (-> excessive turning)
+    resolution = 0.5
+
+    ang_resolution = 0.1
     # this should be an odd number
     fuzzy_n_divisions = 21
 
@@ -241,48 +247,51 @@ class Navigation():
                     return
 
             # should we change the direction we're heading?
-            delta = 0
-            if self.pos.z < 0:
-                if self.heading_to_target > 0:
-                    # opposite signs -> are we close to PI?
-                    delta = 6.28 - self.pos.z - self.heading_to_target
-                else:
-                    # same signs, negative
-                    delta = self.heading_to_target - self.pos.z 
-            else:
+            if self.pos.z > 0:
+                delta = self.pos.z - self.heading_to_target
                 if self.heading_to_target < 0:
-                    # opposite signs -> are we close to PI?
-                    delta = -6.28 + self.pos.z - self.heading_to_target
-                else:
-                    # same signs, positive
-                    delta = self.pos.z - self.heading_to_target
+                    # p = +, h = -
+                    if abs(delta) > math.pi:
+                        # we're close to pi
+                        p = 3.14 - self.pos.z
+                        h = 3.14 + self.heading_to_target
+                        delta = h - p
+            else:
+                delta = self.heading_to_target - self.pos.z 
+                if self.heading_to_target > 0:
+                    # p = -, h = +
+                    if abs(delta) > math.pi:
+                        # we're close to pi
+                        p = 3.14 - self.pos.z
+                        h = 3.14 + self.heading_to_target
+                        delta = p - h
 
-            if abs(delta) < Navigation.ang_resolution 
-                print('forward', self.pos.z, self.heading_to_target)
+            if abs(delta) < Navigation.ang_resolution:
+                print('forward', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target)
                 # move forwards
                 self.heading.linear.x = 1
                 self.heading.angular.z = 0.0
             else:
                 # reset heading
-                if (delta < 0):
+                if delta > 0:
                     self.heading.angular.z = 1
                 else:
                     self.heading.angular.z = -1
                 self.heading.linear.x = 0.0
                 
-                print('turning', self.heading.angular.z, self.pos.z, self.heading_to_target)
+                print('turning', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target, delta, self.heading.angular.z,)
             # print('naving to target') #, self.heading, self.heading_to_target, self.pos)
 
     def calc_target_angle(self):
         delta_x = self.target.x - self.pos.x
         delta_y = self.target.y - self.pos.y
 
-        if delta_x == 0:
+        if isclose(delta_x, 0):
             if delta_y < 0:
                 dest_ang = math.pi / 2
             else:
                 dest_ang = -1 * math.pi / 2
-        elif delta_y == 0:
+        elif isclose(delta_y, 0):
             if delta_x < 0:
                 dest_ang = math.pi
             else:
@@ -290,15 +299,14 @@ class Navigation():
         else:
             dest_ang = math.atan(delta_y / delta_x)
 
-            if delta_x < -0.0001:
-                # rospy.loginfo('delta_x = ' + str(delta_x))
+            if delta_x < 0.0:
+                rospy.loginfo('delta_x = ' + str(delta_x))
                 # flip the unit circle
                 if dest_ang > 0:
-                    # become negative
-                    dest_ang -= math.pi
+                    # stay positive
+                    dest_ang = math.pi - dest_ang
                 else:
-                    # become positive
-                    dest_ang += math.pi
+                    dest_ang = -math.pi - dest_ang
 
         # print('heading to target', dest_ang)
         return dest_ang
