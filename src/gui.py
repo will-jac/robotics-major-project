@@ -50,9 +50,9 @@ class Commentary():
         min_index = -1
         min_dist = -1
         for i in self.list.curselection():
-            if self.order[i] == "Atrium":
+            if len(visited_indexes) == 0:
                 self.points.append(coordinates[self.order[i]])
-                visited_indexes.append(0)
+                visited_indexes.append(self.order.index(self.order[i]))
             else:
                 dist_array = adjacency[self.order[i]]
                 curr_index = index[self.order[i]]

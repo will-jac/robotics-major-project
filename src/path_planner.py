@@ -403,7 +403,7 @@ class PathPlanner():
         file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
-                file.write(b"\xFE" if self.grid[y][x]["next"] == None else b"\x00")
+                file.write(b"\x88" if self.grid[y][x]["next"] == None else b"\x00")
         file.close()
 
         file = open(os.path.dirname(os.path.realpath(__file__)) + "/../open.pgm", 'wb')
@@ -412,6 +412,21 @@ class PathPlanner():
             for x in range(len(self.grid[y])):
                 file.write(b"\xFE" if (x, y) in self.queue.items else b"\x00")
         file.close()
+
+        printGrid = [[0] * len(self.grid[0]) for x in self.grid]
+        printGrid[self.startY][self.startX] = 1
+        checking = (self.startY, self.startX)
+        while self.grid[checking[0]][checking[1]]["next"] != None:
+            printGrid[checking[0]][checking[1]] = 1
+            checking = self.grid[checking[0]][checking[1]]["next"]
+
+        file = open(os.path.dirname(os.path.realpath(__file__)) + "/../path.pgm", 'wb')
+        file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
+        for y in range(len(self.grid)):
+            for x in range(len(self.grid[y])):
+                file.write(b"\xFF" if printGrid[y][x] == 1 else b"\x00")
+        file.close()
+        print("Done saving files")
 
 #Run
 if __name__ == "__main__":
