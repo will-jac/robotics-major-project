@@ -44,8 +44,34 @@ class Commentary():
         print("Closing thing")
 
     def prepOutput(self):
+        visited_indexes = []
+        curr_index = 0
+        min_index = -1
+        min_dist = -1
         for i in self.list.curselection():
-            self.points.append(coordinates[self.order[i]])
+            if i == "Atrium":
+                self.points.append(coordinates[self.order[i]])
+                visited_indexes.append(0)
+            else:
+                dist_array = adjacency[self.order[i]]
+                curr_index = index[self.order[i]]
+                for j in range 6:
+                    if j not in visited_indexes and j != curr_index and j in index[self.list.curselection()]:
+                        if min_dist == -1:
+                            min_dist = dist_array[j]
+                            min_index = j
+                        else:
+                            if dist_array[j] < min_dist:
+                                min_dist = dist_array[j]
+                                min_index = j
+                if min_index != -1:
+                    self.points.append(coordinates[self.order[min_index]])
+                    visited_indexes.append(min_index)
+                    min_index = -1
+                    min_dist = -1
+
+
+
         print(self.points)
         self.giveNext(None)
     
