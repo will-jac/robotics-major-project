@@ -26,8 +26,9 @@ class Commentary():
                 print("Playing some commentary")
                 if self.shouldPlay:
                     playsound(commentaryMap[key], True)
+                    self.shouldPlay = False
                     return
-        self.shouldPlay = False
+        self.shouldPlay = True
 
     def shutdown(self):
         playsound(None)

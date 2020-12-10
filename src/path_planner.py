@@ -331,6 +331,7 @@ class PathPlanner():
                 toPublish = self.xyToPoint(self.goalX, self.goalY)
                 toPublish.z = -1
                 self.pointPublisher.publish(toPublish)
+                rospy.logerr("I think I'm at the end")
                 return
             else:
                 i = 0
@@ -361,10 +362,10 @@ class PathPlanner():
     def shutdown(self):
         print("Shutting down")
     
+    #Debug function for dumping
     def writeMap(self, msg):
         print("Dumping map")
-        #Change this to make the dump work
-        #I'm sure there's a way to do this relative but it didn't work when I tried it
+        #Write a file showing the map after expanding
         file = open(os.path.dirname(os.path.realpath(__file__)) + "/../map.pgm", 'wb')
         file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
         for y in range(len(self.grid)):
@@ -379,6 +380,7 @@ class PathPlanner():
                     file.write(b"\x00" if self.grid[y][x]["open"] < 1 else b"\xFE")
         file.close()
 
+        #Write file based on G-values
         file = open(os.path.dirname(os.path.realpath(__file__)) + "/../g.pgm", 'wb')
         file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
         for y in range(len(self.grid)):
@@ -389,6 +391,7 @@ class PathPlanner():
                     file.write(bytes([int(255 - self.grid[y][x]["g"] / 4)])[0])
         file.close()
 
+        #Write file based 
         file = open(os.path.dirname(os.path.realpath(__file__)) + "/../rhs.pgm", 'wb')
         file.write("P5\n" + str(len(self.grid)) + " " + str(len(self.grid[0])) + "\n255\n")
         for y in range(len(self.grid)):
