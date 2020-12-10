@@ -15,10 +15,12 @@ class Commentary():
             rate.sleep()
 
     def update_pos(self, point):
-        x = round(point.x, 1)
-        y = round(point.y, 1)
+        x = round(point.x)
+        y = round(point.y)
+        print(x, y)
         for key in commentaryMap.keys():
-            if coordinates[key][0] == x and coordinates[key][1] == y:
+            if round(coordinates[key][0]) == x and round(coordinates[key][1]) == y:
+                print("Playing some commentary")
                 playsound(commentaryMap[key], True)
                 return
 

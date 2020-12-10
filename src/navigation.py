@@ -274,9 +274,9 @@ class Navigation():
                         delta = p - h
 
             if abs(delta) < Navigation.ang_resolution:
-                print('forward', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target)
+                #print('forward', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target)
                 # move forwards
-                self.heading.linear.x = .2
+                self.heading.linear.x = .4
                 self.heading.angular.z = 0.0
             else:
                 # reset heading
@@ -286,7 +286,7 @@ class Navigation():
                     self.heading.angular.z = -1
                 self.heading.linear.x = 0.0
                 
-                print('turning', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target, delta, self.heading.angular.z,)
+                #print('turning', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target, delta, self.heading.angular.z,)
             # print('naving to target') #, self.heading, self.heading_to_target, self.pos)
 
     def calc_target_angle(self):

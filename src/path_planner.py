@@ -222,7 +222,7 @@ class PathPlanner():
             file.close()
 
             # handle map metadata
-            self.resolution = 0.3
+            # self.resolution = 0.3
             self.grid = [[None] * msg.info.width for _ in range(msg.info.height)]
             
             #For each row, mark a row
@@ -329,7 +329,7 @@ class PathPlanner():
                 return
             else:
                 i = 0
-                while self.grid[nextPoint[0]][nextPoint[1]]["next"] != None and i < 8:
+                while self.grid[nextPoint[0]][nextPoint[1]]["next"] != None and i < 5:
                     nextPoint = self.grid[nextPoint[0]][nextPoint[1]]["next"]
                     i += 1
                 self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))

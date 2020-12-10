@@ -19,7 +19,7 @@ class Commentary():
         "Electrical Lab",
         "CS Department"]
 
-        rospy.init_node('commentary', anonymous=True)
+        rospy.init_node('gui', anonymous=True)
         rospy.on_shutdown(self.shutdown)
         top = Tk()
         top.geometry("500x420")

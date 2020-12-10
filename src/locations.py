@@ -33,6 +33,5 @@ commentaryMap = {
     "East Room": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/EastRoom.wav",
     "West Room": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/WestRoom.wav",
     "Electrical Lab": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/ElectricalLab.wav",
-    "CS Department": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/CSDepartment.wav",
-    "Test": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/ElectricalLab.wav"
+    "CS Department": os.path.dirname(os.path.realpath(__file__)) + "/../commentary/CSDepartment.wav"
 }
