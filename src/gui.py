@@ -55,8 +55,8 @@ class Commentary():
             else:
                 dist_array = adjacency[self.order[i]]
                 curr_index = index[self.order[i]]
-                for j in range 6:
-                    if j not in visited_indexes and j != curr_index and j in index[self.list.curselection()]:
+                for j in range(6):
+                    if j not in visited_indexes and j != curr_index and j in self.list.curselection():
                         if min_dist == -1:
                             min_dist = dist_array[j]
                             min_index = j
@@ -69,9 +69,6 @@ class Commentary():
                     visited_indexes.append(min_index)
                     min_index = -1
                     min_dist = -1
-
-
-
         print(self.points)
         self.giveNext(None)
     

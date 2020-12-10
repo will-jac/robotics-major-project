@@ -17,7 +17,6 @@ class Commentary():
     def update_pos(self, point):
         x = round(point.x)
         y = round(point.y)
-        print(x, y)
         for key in commentaryMap.keys():
             if round(coordinates[key][0]) == x and round(coordinates[key][1]) == y:
                 print("Playing some commentary")

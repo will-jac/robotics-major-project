@@ -1,10 +1,10 @@
 coordinates = {
-    "Atrium": (3, -13),
-    "CS Office": (11.51, -5.83),
-    "East Room": (6, 4),
-    "West Room": (-4.4, 4),
-    "Electrical Lab": (0, 6),
-    "CS Department": (-16.2, 0),
+    "Atrium": (3, -11),
+    "CS Office": (11.51, -3.83),
+    "East Room": (6, 6),
+    "West Room": (-4.4, 6),
+    "Electrical Lab": (0, 8),
+    "CS Department": (-16.2, 2),
 }
 
 adjacency = {
