@@ -16,6 +16,15 @@ adjacency = {
     "CS Department": [3, 3, 2, 1, 2, 0],
 }
 
+index = {
+    "Atrium" : 0,
+    "CS Office": 1,
+    "East Room": 2,
+    "West Room": 3,
+    "Electrical Lab": 4,
+    "CS Department": 5,
+}
+
 import os
 
 commentaryMap = {
