@@ -1,0 +1,4 @@
+project.launch
+*.pyc
+src/locations.pyc
+project.launch
