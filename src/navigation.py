@@ -19,7 +19,7 @@ def isclose(a,b,rel_tol=1e-08, abs_tol=0.01):
 class Navigation():
 
     # this needs to be big to prevent angle differences from causing problems (-> excessive turning)
-    resolution = 0.5
+    resolution = 0.001
 
     ang_resolution = 0.1
     # this should be an odd number
@@ -254,7 +254,7 @@ class Navigation():
 
             # should we change the direction we're heading?
             if self.pos.z > 0:
-                delta = self.heading_to_target - self.pos.z 
+                delta = self.heading_to_target - self.pos.z
                 if self.heading_to_target < 0:
                     # p = +, h = -
                     if abs(delta) > math.pi:
@@ -262,8 +262,7 @@ class Navigation():
                         p = 3.14 - self.pos.z
                         h = 3.14 + self.heading_to_target
                         delta = h - p
-                    else:
-                        delta *= -1
+                        
             else:
                 delta = self.heading_to_target - self.pos.z 
                 if self.heading_to_target > 0:
@@ -275,7 +274,7 @@ class Navigation():
                         delta = p - h
 
             if abs(delta) < Navigation.ang_resolution:
-                # print('forward', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target)
+                print('forward', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target)
                 # move forwards
                 self.heading.linear.x = .2
                 self.heading.angular.z = 0.0
@@ -287,7 +286,7 @@ class Navigation():
                     self.heading.angular.z = -1
                 self.heading.linear.x = 0.0
                 
-                # print('turning', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target, delta, self.heading.angular.z,)
+                print('turning', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target, delta, self.heading.angular.z,)
             # print('naving to target') #, self.heading, self.heading_to_target, self.pos)
 
     def calc_target_angle(self):
@@ -308,12 +307,20 @@ class Navigation():
             dest_ang = math.atan(delta_y / delta_x)
 
             if delta_x < 0.0:
-                # flip the unit circle
-                if dest_ang > 0:
-                    # stay positive
-                    dest_ang = math.pi - dest_ang
+                if delta_y > 0.0:
+                    # flip the unit circle (along the y axis)
+                    # print('dest_ang', dest_ang, delta_x, delta_y)
+                    if dest_ang > 0:
+                        # stay positive
+                        dest_ang = math.pi - dest_ang
+                    else:
+                        dest_ang = math.pi + dest_ang
                 else:
-                    dest_ang = -math.pi - dest_ang
+                    # flip AND invert the unit circle
+                    if dest_ang > 0:
+                        dest_ang -= math.pi
+                    else:
+                        dest_ang += math.pi
 
         # print('heading to target', dest_ang)
         return dest_ang
