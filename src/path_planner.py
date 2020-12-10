@@ -148,7 +148,7 @@ class PathPlanner():
 
     #Calculate the cost of an edge. Infinite if impossible, else the cartesian distance.
     def cost(self, x1, y1, x2, y2):
-        if self.grid[y1][x1]['open'] < 1 or self.grid[y2][x2]['open'] < 1:
+        if self.grid[y1][x1]['open'] < 1 or self.grid[y1][x1]['open'] < 1:
             return float('inf')
         else:
             return math.hypot(y1 - y2, x1 - x2)
@@ -326,12 +326,12 @@ class PathPlanner():
         if self.foundPath:
             nextPoint = self.grid[self.startY][self.startX]["next"]
             if (nextPoint == None):
-                self.nextRequest.publish()
                 rospy.loginfo('No path found!')
                 toPublish = self.xyToPoint(self.goalX, self.goalY)
                 toPublish.z = -1
                 self.pointPublisher.publish(toPublish)
                 rospy.logerr("I think I'm at the end")
+                self.nextRequest.publish()
                 return
             else:
                 i = 0

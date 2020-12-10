@@ -19,9 +19,9 @@ def isclose(a,b,rel_tol=1e-08, abs_tol=0.01):
 class Navigation():
 
     # this needs to be big to prevent angle differences from causing problems (-> excessive turning)
-    resolution = 0.02
+    resolution = 0.1
 
-    ang_resolution = 0.1
+    ang_resolution = 0.05
     # this should be an odd number
     fuzzy_n_divisions = 21
 

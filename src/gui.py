@@ -45,6 +45,7 @@ class Commentary():
         print("Closing thing")
 
     def prepOutput(self):
+        self.points = []
         visited_indexes = []
         curr_index = 0
         min_index = -1
@@ -70,6 +71,7 @@ class Commentary():
                     visited_indexes.append(min_index)
                     min_index = -1
                     min_dist = -1
+        self.points.append((0, 0))
         print(self.points)
         self.giveNext(None)
     
