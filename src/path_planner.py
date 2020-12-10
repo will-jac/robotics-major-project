@@ -49,6 +49,7 @@ class PathPlanner():
 
         #Sending out data to the navigation layer
         self.pointPublisher = rospy.Publisher('/project/path_planner', Point, queue_size=1)
+        self.nextRequest = rospy.Publisher('/project/task_request', Empty, queue_size=1)
 
         #Compute the shortest path, then wait for messages
         self.computeShortestPath()
@@ -140,7 +141,6 @@ class PathPlanner():
             #Handle path
             self.foundPath = False
             rospy.logerr("Cannot find a path")
-            rospy.logerr(e)
 
     #Calculate the cost of an edge. Infinite if impossible, else the cartesian distance.
     def cost(self, x1, y1, x2, y2):
@@ -323,6 +323,7 @@ class PathPlanner():
             print("I think I found a path")
             nextPoint = self.grid[self.startY][self.startX]["next"]
             if (nextPoint == None):
+                self.nextRequest.publish()
                 rospy.loginfo('No path found!')
                 toPublish = self.xyToPoint(self.goalX, self.goalY)
                 toPublish.z = -1
