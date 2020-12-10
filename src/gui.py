@@ -12,24 +12,12 @@ class Commentary():
     def __init__(self):
         self.points = []
 
-        self.order = ["Attrium",
-        "Attrium Door 1",
-        "CS Office Door",
+        self.order = ["Atrium",
         "CS Office",
-        "CS Office Door",
-        "East Room Door 1",
         "East Room",
-        "East Room Door 2",
-        "West Room Door 1",
         "West Room",
-        "West Room Door 2",
-        "Electrical Lab Door 1",
         "Electrical Lab",
-        "Electrical Lab Door 2",
-        "CS Department Door",
-        "CS Department",
-        "CS Department Door",
-        "Attrium Door 2"]
+        "CS Department"]
 
         rospy.init_node('commentary', anonymous=True)
         rospy.on_shutdown(self.shutdown)
