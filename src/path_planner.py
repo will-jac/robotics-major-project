@@ -28,10 +28,6 @@ class PathPlanner():
         self.km = 0
         self.foundPath = False
 
-        # idk if this is correct
-        self.offset = (0,0)
-        self.resolution = 0.5
-
         #ROS setup stuff
         rospy.init_node('path_planner', anonymous=True)
         rospy.on_shutdown(self.shutdown)
@@ -215,8 +211,8 @@ class PathPlanner():
                 m = re.search("(.+?): (.*)", line)
                 if (m):
                     #Get resolution
-                    # if m.group(1) == "resolution":
-                    #     self.resolution = float(m.group(2))
+                    if m.group(1) == "resolution":
+                        self.resolution = float(m.group(2))
                     #Get origin
                     if m.group(1) == "origin":
                         m = re.search("\[(-?\d+\.\d+), (-?\d+\.\d+), -?\d+\.\d+\]", m.group(2))
@@ -311,8 +307,8 @@ class PathPlanner():
                     self.grid[y][x]["open"] == 1
         #Make all the cells close to walls closed off
         for point in wallList:
-            for i in range(round(.25 / self.resolution) * 2 + 1):
-                for j in range(round(.25 / self.resolution) * 2 + 1):
+            for i in range(int(round(.25 / self.resolution) * 2 + 1)):
+                for j in range(int(round(.25 / self.resolution) * 2 + 1)):
                     considering = (point[0] + i - 5, point[1] + j - 5)
                     if considering[0] >= len(self.grid) or considering[0] < 0:
                         continue
@@ -328,9 +324,11 @@ class PathPlanner():
             nextPoint = self.grid[self.startY][self.startX]["next"]
             if (nextPoint == None):
                 rospy.loginfo('No path found!')
+                toPublish = self.xyToPoint(self.goalX, self.goalY)
+                toPublish.z = -1
+                self.pointPublisher.publish(toPublish)
                 return
             else:
-
                 self.pointPublisher.publish(self.xyToPoint(nextPoint[1], nextPoint[0]))
         else:
             rospy.loginfo('no path found!')
@@ -364,8 +362,10 @@ class PathPlanner():
         for y in range(len(self.grid)):
             for x in range(len(self.grid[y])):
                 if y == self.goalY and x == self.goalX:
+                    print("Marking goal")
                     file.write(b"\x55")
                 elif y == self.startY and x == self.startX:
+                    print("Marking start")
                     file.write(b"\xAA")
                 else:
                     file.write(b"\x00" if self.grid[y][x]["open"] < 1 else b"\xFE")

@@ -63,7 +63,7 @@ class Navigation():
 
         # print('starting up')
 
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(100)
         # Keep self from shutting down until killed
         while not rospy.is_shutdown():
             self.navigate()
@@ -84,6 +84,12 @@ class Navigation():
 
         if self.reached_target():
             # stop moving
+            # this is causing problems for me (Jack)
+            # if self.target.z == -1:
+            #     self.heading = Twist()
+            # else:
+            #     self.heading = Twist()
+            #     self.heading.linear.x = 0.1
             self.heading = Twist()
 
             # set new target (unless we're already at the goal)
@@ -248,7 +254,7 @@ class Navigation():
 
             # should we change the direction we're heading?
             if self.pos.z > 0:
-                delta = self.pos.z - self.heading_to_target
+                delta = self.heading_to_target - self.pos.z 
                 if self.heading_to_target < 0:
                     # p = +, h = -
                     if abs(delta) > math.pi:
@@ -256,6 +262,8 @@ class Navigation():
                         p = 3.14 - self.pos.z
                         h = 3.14 + self.heading_to_target
                         delta = h - p
+                    else:
+                        delta *= -1
             else:
                 delta = self.heading_to_target - self.pos.z 
                 if self.heading_to_target > 0:
@@ -267,9 +275,9 @@ class Navigation():
                         delta = p - h
 
             if abs(delta) < Navigation.ang_resolution:
-                print('forward', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target)
+                # print('forward', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target)
                 # move forwards
-                self.heading.linear.x = 1
+                self.heading.linear.x = .2
                 self.heading.angular.z = 0.0
             else:
                 # reset heading
@@ -279,19 +287,19 @@ class Navigation():
                     self.heading.angular.z = -1
                 self.heading.linear.x = 0.0
                 
-                print('turning', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target, delta, self.heading.angular.z,)
+                # print('turning', self.pos.x, self.pos.y, self.pos.z, self.heading_to_target, delta, self.heading.angular.z,)
             # print('naving to target') #, self.heading, self.heading_to_target, self.pos)
 
     def calc_target_angle(self):
         delta_x = self.target.x - self.pos.x
         delta_y = self.target.y - self.pos.y
 
-        if isclose(delta_x, 0):
+        if isclose(delta_x, 0) or delta_x == 0:
             if delta_y < 0:
-                dest_ang = math.pi / 2
-            else:
                 dest_ang = -1 * math.pi / 2
-        elif isclose(delta_y, 0):
+            else:
+                dest_ang = math.pi / 2
+        elif isclose(delta_y, 0) or delta_y == 0:
             if delta_x < 0:
                 dest_ang = math.pi
             else:
@@ -300,7 +308,6 @@ class Navigation():
             dest_ang = math.atan(delta_y / delta_x)
 
             if delta_x < 0.0:
-                rospy.loginfo('delta_x = ' + str(delta_x))
                 # flip the unit circle
                 if dest_ang > 0:
                     # stay positive
