@@ -59,14 +59,14 @@ class Commentary():
         for i in self.list.curselection():
             self.points.append(coordinates[self.order[i]])
         print(self.points)
-        giveNext(None)
+        self.giveNext(None)
     
     def giveNext(self, msg):
         if len(self.points) > 0:
             toPublish = Point(0, 0, 0)
-            toPublish.x = self.points[0]
-            toPublish.y = self.points[1]
-            out.publish(toPublish)
+            toPublish.x = self.points[0][0]
+            toPublish.y = self.points[0][1]
+            self.out.publish(toPublish)
             del self.points[0]
         
 
